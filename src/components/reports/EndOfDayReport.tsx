@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useShop } from '../../context/ShopContext';
-import { getLocalDateStr } from '../../services/storage';
 import {
   FileSpreadsheet,
   Printer,
@@ -31,17 +30,12 @@ export const EndOfDayReportView: React.FC = () => {
     openProfileModal,
   } = useShop();
 
-  const todayIso = getLocalDateStr();
+  const todayIso = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
   const [actualCashInput, setActualCashInput] = useState<string>('');
   const [customFloatInput, setCustomFloatInput] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiReportText, setAiReportText] = useState<string | null>(null);
-
-  // Generate report for chosen date (must be called before any conditional return to satisfy Rules of Hooks)
-  const report = useMemo(() => {
-    return generateEndOfDayReport(selectedDate);
-  }, [generateEndOfDayReport, selectedDate]);
 
   // If Staff profile is active, lock EOD financial report
   if (!isOwner) {
@@ -71,6 +65,11 @@ export const EndOfDayReportView: React.FC = () => {
       </div>
     );
   }
+
+  // Generate report for chosen date
+  const report = useMemo(() => {
+    return generateEndOfDayReport(selectedDate);
+  }, [generateEndOfDayReport, selectedDate]);
 
   const activeFloat = customFloatInput !== '' ? parseFloat(customFloatInput) || 0 : report.openingCashFloat;
   const expectedCash = activeFloat + report.cashSales - report.cashExpenses;

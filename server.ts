@@ -142,13 +142,13 @@ app.post('/api/local-db/sync', (req, res) => {
   try {
     const { products, transactions, expenses, movements, settings, profiles, deviceLock } = req.body;
 
-    if (products !== undefined) saveLocalJson('products.json', products);
-    if (transactions !== undefined) saveLocalJson('transactions.json', transactions);
-    if (expenses !== undefined) saveLocalJson('expenses.json', expenses);
-    if (movements !== undefined) saveLocalJson('movements.json', movements);
-    if (settings !== undefined) saveLocalJson('settings.json', settings);
-    if (profiles !== undefined) saveLocalJson('profiles.json', profiles);
-    if (deviceLock !== undefined) saveLocalJson('device_lock.json', deviceLock);
+    if (products) saveLocalJson('products.json', products);
+    if (transactions) saveLocalJson('transactions.json', transactions);
+    if (expenses) saveLocalJson('expenses.json', expenses);
+    if (movements) saveLocalJson('movements.json', movements);
+    if (settings) saveLocalJson('settings.json', settings);
+    if (profiles) saveLocalJson('profiles.json', profiles);
+    if (deviceLock) saveLocalJson('device_lock.json', deviceLock);
 
     res.json({
       success: true,
@@ -192,18 +192,7 @@ app.post('/api/local-db/create-backup', (req, res) => {
   }
 });
 
-// 5. Download Standalone Windows Desktop Application (.exe)
-app.get('/api/download-exe', (_req, res) => {
-  const exePath = path.resolve(__dirname, 'SA_Brothers_POS.exe');
-  if (!fs.existsSync(exePath)) {
-    return res.status(404).json({ error: 'SA_Brothers_POS.exe not found' });
-  }
-  res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
-  res.setHeader('Content-Disposition', 'attachment; filename="SA_Brothers_POS.exe"');
-  res.sendFile(exePath);
-});
-
-// 5b. Download Windows Desktop Launcher (.bat)
+// 5. Download Windows Desktop Launcher (.bat)
 app.get('/api/download-launcher', (_req, res) => {
   const batPath = path.resolve(__dirname, 'START_SHOP_POS.bat');
   res.setHeader('Content-Type', 'application/x-bat');

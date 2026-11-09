@@ -49,12 +49,6 @@ export const InventoryManager: React.FC = () => {
   const [alertFilter, setAlertFilter] = useState<'all' | 'low' | 'out'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'stockAsc' | 'stockDesc' | 'soldDesc' | 'marginDesc'>('stockAsc');
 
-  const allCategories = useMemo(() => {
-    const customCats = products
-      .map((p) => p.category)
-      .filter((c) => c && !CATEGORIES.includes(c));
-    return Array.from(new Set([...CATEGORIES, ...customCats]));
-  }, [products]);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -461,7 +455,7 @@ export const InventoryManager: React.FC = () => {
           >
             All Categories
           </button>
-          {allCategories.map((cat) => (
+          {CATEGORIES.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -688,7 +682,7 @@ export const InventoryManager: React.FC = () => {
                     onChange={(e: any) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   >
-                    {allCategories.map((c) => (
+                    {CATEGORIES.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>

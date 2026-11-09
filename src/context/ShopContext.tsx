@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import {
   Product,
   SaleTransaction,
@@ -13,14 +13,7 @@ import {
   UserProfile,
   DeviceSecurityConfig,
 } from '../types';
-import {
-  storageService,
-  DEFAULT_SETTINGS,
-  DEFAULT_PROFILES,
-  DEFAULT_DEVICE_SECURITY,
-  getLocalDateStr,
-  isSameDayAsDateStr,
-} from '../services/storage';
+import { storageService, DEFAULT_SETTINGS, DEFAULT_PROFILES, DEFAULT_DEVICE_SECURITY } from '../services/storage';
 
 interface ShopContextType {
   products: Product[];
@@ -53,6 +46,10 @@ interface ShopContextType {
   quickSwitchToStaff: () => void;
   updateProfilePin: (profileId: string, newPin: string) => { success: boolean; message?: string };
   updateProfileName: (profileId: string, newName: string) => void;
+  updateProfileDetails: (
+    profileId: string,
+    updates: { pin?: string; name?: string }
+  ) => { success: boolean; message?: string };
 
   // Manual Item Addition (Owner Catalog Feature)
   isAddProductModalOpen: boolean;
@@ -167,61 +164,44 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [thisDeviceId] = useState<string>(() => storageService.getThisDeviceId());
   const [isThisDeviceAuthorized, setIsThisDeviceAuthorized] = useState<boolean>(() => storageService.isDeviceAuthorized());
   const [hardDriveLastSaved, setHardDriveLastSaved] = useState<string | null>(() => new Date().toLocaleTimeString());
-  const hasHydratedFromDisk = useRef<boolean>(false);
 
-  // Check and sync from local hard disk on app boot to guarantee progress restoration after PC reboot
+  // Check and sync from all database tiers on app boot (Hard Disk DB, IndexedDB, LocalStorage)
   useEffect(() => {
-    fetch('/api/local-db/load')
-      .then((res) => res.json())
-      .then((resData) => {
-        if (resData?.success && resData?.data) {
-          const d = resData.data;
-          const diskInitialized =
-            (Array.isArray(d.products) && d.products.length > 0) ||
-            (d.settings && typeof d.settings === 'object' && Object.keys(d.settings).length > 0);
+    let isMounted = true;
+    storageService.loadFullDatabaseFromAllTiers().then((loaded) => {
+      if (!isMounted) return;
 
-          if (diskInitialized) {
-            if (Array.isArray(d.products) && d.products.length > 0) {
-              storageService.saveProducts(d.products);
-              setProducts(d.products);
-            }
-            if (Array.isArray(d.transactions)) {
-              storageService.saveTransactions(d.transactions);
-              setTransactions(d.transactions);
-            }
-            if (Array.isArray(d.expenses)) {
-              storageService.saveExpenses(d.expenses);
-              setExpenses(d.expenses);
-            }
-            if (Array.isArray(d.movements)) {
-              storageService.saveMovements(d.movements);
-              setMovements(d.movements);
-            }
-            if (d.settings && typeof d.settings === 'object' && Object.keys(d.settings).length > 0) {
-              const mergedSettings = { ...DEFAULT_SETTINGS, ...d.settings };
-              storageService.saveSettings(mergedSettings);
-              setSettings(mergedSettings);
-            }
-            if (Array.isArray(d.profiles) && d.profiles.length > 0) {
-              storageService.saveProfiles(d.profiles);
-              setProfiles(d.profiles);
-            }
-          } else {
-            // First boot: seed local_database on disk with initial state
-            storageService.saveToHardDrive({ products, transactions, expenses, movements, settings, profiles });
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        hasHydratedFromDisk.current = true;
-      });
+      if (loaded.products && Array.isArray(loaded.products) && loaded.products.length > 0) {
+        setProducts(loaded.products);
+      }
+      if (loaded.profiles && Array.isArray(loaded.profiles) && loaded.profiles.length > 0) {
+        setProfiles(loaded.profiles);
+      }
+      if (loaded.settings && typeof loaded.settings === 'object' && loaded.settings.shopName) {
+        setSettings(loaded.settings);
+      }
+      if (loaded.transactions && Array.isArray(loaded.transactions)) {
+        setTransactions(loaded.transactions);
+      }
+      if (loaded.expenses && Array.isArray(loaded.expenses)) {
+        setExpenses(loaded.expenses);
+      }
+      if (loaded.movements && Array.isArray(loaded.movements)) {
+        setMovements(loaded.movements);
+      }
+      if (loaded.deviceLock) {
+        setDeviceSecurity(loaded.deviceLock);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Flush state immediately on page unload or visibility change to survive sudden PC power cuts
   useEffect(() => {
     const handleFlush = () => {
-      if (!hasHydratedFromDisk.current) return;
       storageService.saveToHardDrive({ products, transactions, expenses, movements, settings, profiles });
     };
     window.addEventListener('beforeunload', handleFlush);
@@ -232,9 +212,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [products, transactions, expenses, movements, settings, profiles]);
 
-  // Auto-save everything to computer hard drive (/local_database/) whenever state changes after hydration
+  // Auto-save everything to computer hard drive (/local_database/) whenever state changes
   useEffect(() => {
-    if (!hasHydratedFromDisk.current) return;
     storageService.saveToHardDrive({ products, transactions, expenses, movements, settings, profiles });
     setHardDriveLastSaved(new Date().toLocaleTimeString());
   }, [products, transactions, expenses, movements, settings, profiles]);
@@ -332,13 +311,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const target = profiles.find((p) => p.id === profileId);
     if (!target) return { success: false, message: 'Profile not found' };
 
-    const pinClean = pin.trim().toLowerCase();
-    const targetPinClean = target.pin.trim().toLowerCase();
-    const isRoleMatch =
-      (target.role === 'owner' && (pinClean === 'owner' || pinClean === 'admin' || pinClean === targetPinClean)) ||
-      (target.role === 'staff' && (pinClean === 'staff' || pinClean === 'cashier' || pinClean === targetPinClean));
-
-    if (pinClean !== targetPinClean && !isRoleMatch) {
+    if (target.pin.trim() !== pin.trim()) {
       return { success: false, message: 'Incorrect password / PIN code' };
     }
 
@@ -348,30 +321,37 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = (usernameInput: string, passwordPinInput: string): { success: boolean; message?: string } => {
-    const u = usernameInput.trim().toLowerCase();
-    const p = passwordPinInput.trim().toLowerCase();
+    const rawPass = passwordPinInput.trim();
+    const rawUser = usernameInput.trim().toLowerCase();
 
-    if (!p) {
-      return { success: false, message: 'Please enter your password or PIN.' };
+    if (!rawPass) {
+      return { success: false, message: 'Please enter your password / PIN to sign in.' };
     }
 
     const staffProfile = profiles.find((prof) => prof.role === 'staff') || DEFAULT_PROFILES[1];
     const ownerProfile = profiles.find((prof) => prof.role === 'owner') || DEFAULT_PROFILES[0];
 
-    const staffPinLower = (staffProfile.pin || '0000').toLowerCase();
-    const ownerPinLower = (ownerProfile.pin || '1234').toLowerCase();
+    const ownerExactPin = (ownerProfile.pin || '').trim();
+    const staffExactPin = (staffProfile.pin || '').trim();
 
-    // Check staff indicators
-    const isStaffUser = u === 'staff' || u === 'cashier' || u === 'staff cashier' || u === 'user';
-    const isStaffPass = p === 'staff' || p === '0000' || p === 'cashier' || p === staffPinLower;
+    // Check if user is specifying role or username
+    const isOwnerTarget =
+      rawUser === 'owner' ||
+      rawUser === 'admin' ||
+      rawUser === 'shop owner' ||
+      rawUser === ownerProfile.name.trim().toLowerCase() ||
+      rawUser === ownerProfile.id.toLowerCase();
 
-    // Check owner indicators
-    const isOwnerUser = u === 'owner' || u === 'admin' || u === 'shop owner' || u === 'manager' || u === 'kakarot' || u === 'khan' || u === 'boss';
-    const isOwnerPass = p === 'owner' || p === '1234' || p === 'admin' || p === ownerPinLower;
+    const isStaffTarget =
+      rawUser === 'staff' ||
+      rawUser === 'cashier' ||
+      rawUser === 'staff cashier' ||
+      rawUser === staffProfile.name.trim().toLowerCase() ||
+      rawUser === staffProfile.id.toLowerCase();
 
-    // 1. Explicit Owner username: must provide valid Owner password/PIN
-    if (isOwnerUser) {
-      if (isOwnerPass) {
+    // 1. If user targeted Owner explicitly
+    if (isOwnerTarget) {
+      if (rawPass === ownerExactPin) {
         setActiveProfileId(ownerProfile.id);
         setIsLoggedIn(true);
         storageService.setIsLoggedIn(true);
@@ -380,13 +360,13 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return {
         success: false,
-        message: `Incorrect password for Shop Owner. Use "${ownerProfile.pin}" or "owner".`,
+        message: 'Incorrect Owner password. Only the password configured in Store Settings is accepted.',
       };
     }
 
-    // 2. Explicit Staff username: must provide valid Staff password/PIN
-    if (isStaffUser) {
-      if (isStaffPass) {
+    // 2. If user targeted Staff explicitly
+    if (isStaffTarget) {
+      if (rawPass === staffExactPin) {
         setActiveProfileId(staffProfile.id);
         setIsLoggedIn(true);
         storageService.setIsLoggedIn(true);
@@ -395,51 +375,42 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return {
         success: false,
-        message: `Incorrect password for Staff Cashier. Use "${staffProfile.pin}" or "staff".`,
+        message: 'Incorrect Staff password. Only the password set for Staff Cashier is accepted.',
       };
     }
 
-    // 3. Match by custom profile name or ID
-    const customMatch = profiles.find(
-      (prof) => prof.name.toLowerCase() === u || prof.id.toLowerCase() === u
-    );
-    if (customMatch) {
-      const isCustomPass =
-        p === customMatch.pin.toLowerCase() ||
-        p === customMatch.role.toLowerCase() ||
-        (customMatch.role === 'owner' && isOwnerPass) ||
-        (customMatch.role === 'staff' && isStaffPass);
-      if (isCustomPass) {
-        setActiveProfileId(customMatch.id);
-        setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
-        setIsThisDeviceAuthorized(true);
-        return { success: true };
-      }
-      return { success: false, message: `Incorrect password / PIN for ${customMatch.name}` };
+    // 3. If username is not explicitly "owner" or "staff" (or left empty):
+    // Check if the password matches the Owner password
+    if (rawPass === ownerExactPin) {
+      setActiveProfileId(ownerProfile.id);
+      setIsLoggedIn(true);
+      storageService.setIsLoggedIn(true);
+      setIsThisDeviceAuthorized(true);
+      return { success: true };
     }
 
-    // 4. If username was left blank or generic, allow PIN-only quick login
-    if (!u) {
-      if (isOwnerPass) {
-        setActiveProfileId(ownerProfile.id);
-        setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
-        setIsThisDeviceAuthorized(true);
-        return { success: true };
-      }
-      if (isStaffPass) {
-        setActiveProfileId(staffProfile.id);
-        setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
-        setIsThisDeviceAuthorized(true);
-        return { success: true };
-      }
+    // Check if the password matches the Staff password
+    if (rawPass === staffExactPin) {
+      setActiveProfileId(staffProfile.id);
+      setIsLoggedIn(true);
+      storageService.setIsLoggedIn(true);
+      setIsThisDeviceAuthorized(true);
+      return { success: true };
+    }
+
+    // Check other custom profiles if any exist
+    const otherProfile = profiles.find((p) => p.pin.trim() === rawPass);
+    if (otherProfile) {
+      setActiveProfileId(otherProfile.id);
+      setIsLoggedIn(true);
+      storageService.setIsLoggedIn(true);
+      setIsThisDeviceAuthorized(true);
+      return { success: true };
     }
 
     return {
       success: false,
-      message: 'Unknown username or password. Please use username "staff" (password: "staff") or "owner" (password: "owner").',
+      message: 'Incorrect password. Only the password configured in Store Settings is accepted.',
     };
   };
 
@@ -455,23 +426,37 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateProfilePin = (profileId: string, newPin: string): { success: boolean; message?: string } => {
-    if (!newPin || newPin.trim().length < 4) {
+  const updateProfileDetails = (
+    profileId: string,
+    updates: { pin?: string; name?: string }
+  ): { success: boolean; message?: string } => {
+    if (updates.pin !== undefined && updates.pin.trim().length < 4) {
       return { success: false, message: 'Password / PIN must be at least 4 digits' };
     }
-    const updated = profiles.map((p) => (p.id === profileId ? { ...p, pin: newPin.trim() } : p));
-    storageService.saveProfiles(updated);
-    storageService.saveToHardDrive({ profiles: updated });
-    setProfiles(updated);
-    return { success: true, message: 'Password updated successfully' };
+
+    setProfiles((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id !== profileId) return p;
+        return {
+          ...p,
+          ...(updates.pin !== undefined ? { pin: updates.pin.trim() } : {}),
+          ...(updates.name !== undefined && updates.name.trim() ? { name: updates.name.trim() } : {}),
+        };
+      });
+      storageService.saveProfiles(updated);
+      storageService.saveToHardDrive({ profiles: updated });
+      return updated;
+    });
+
+    return { success: true, message: 'Profile updated successfully' };
+  };
+
+  const updateProfilePin = (profileId: string, newPin: string): { success: boolean; message?: string } => {
+    return updateProfileDetails(profileId, { pin: newPin });
   };
 
   const updateProfileName = (profileId: string, newName: string) => {
-    if (!newName.trim()) return;
-    const updated = profiles.map((p) => (p.id === profileId ? { ...p, name: newName.trim() } : p));
-    storageService.saveProfiles(updated);
-    storageService.saveToHardDrive({ profiles: updated });
-    setProfiles(updated);
+    updateProfileDetails(profileId, { name: newName });
   };
 
   const openAddProductModal = (initialCategory?: string) => {
@@ -617,17 +602,9 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (cart.length === 0) return null;
 
     const now = new Date();
-    const dateStr = getLocalDateStr(now);
-    const dateFormatted = dateStr.replace(/-/g, '');
-    const receiptPrefix = `RCP-${dateFormatted}-`;
-    const maxSeq = transactions.reduce((max, t) => {
-      if (t.receiptNumber.startsWith(receiptPrefix)) {
-        const seq = parseInt(t.receiptNumber.slice(receiptPrefix.length), 10);
-        if (!isNaN(seq) && seq > max) return seq;
-      }
-      return max;
-    }, 0);
-    const receiptNumber = `${receiptPrefix}${String(maxSeq + 1).padStart(4, '0')}`;
+    const dateFormatted = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const dailyTxCount = transactions.filter((t) => t.timestamp.startsWith(now.toISOString().slice(0, 10))).length;
+    const receiptNumber = `RCP-${dateFormatted}-${String(dailyTxCount + 1).padStart(4, '0')}`;
     const txId = `tx-${Date.now()}`;
 
     // Calculate line items and costs with strict stock validation
@@ -684,7 +661,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       changeDue,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
-      cashierName: activeProfile?.name || settings.cashierName || 'Cashier',
+      cashierName: settings.cashierName || 'Cashier',
       notes,
       status: 'completed',
     };
@@ -806,16 +783,16 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Clear profit & sales history from Dashboard (Owner action)
   const clearProfitAndSalesData = (scope: 'today' | 'all'): { success: boolean; count: number } => {
-    const todayStr = getLocalDateStr();
+    const todayStr = new Date().toISOString().slice(0, 10);
     let updatedTx: SaleTransaction[] = [];
     let updatedExp: Expense[] = [];
     let count = 0;
 
     if (scope === 'today') {
       const todayCount =
-        transactions.filter((t) => isSameDayAsDateStr(t.timestamp, todayStr)).length +
+        transactions.filter((t) => t.timestamp.startsWith(todayStr)).length +
         expenses.filter((e) => e.date === todayStr).length;
-      updatedTx = transactions.filter((t) => !isSameDayAsDateStr(t.timestamp, todayStr));
+      updatedTx = transactions.filter((t) => !t.timestamp.startsWith(todayStr));
       updatedExp = expenses.filter((e) => e.date !== todayStr);
       count = todayCount;
     } else {
@@ -1020,37 +997,18 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Settings
   const updateSettings = (updates: Partial<ShopSettings>) => {
-    const updated = { ...settings, ...updates };
-    storageService.saveSettings(updated);
-    storageService.saveToHardDrive({ settings: updated });
-    setSettings(updated);
+    setSettings((prev) => ({ ...prev, ...updates }));
   };
 
   const resetDemoData = () => {
     storageService.resetToDemo();
-    const freshProducts = storageService.getProducts();
-    const freshTransactions = storageService.getTransactions();
-    const freshExpenses = storageService.getExpenses();
-    const freshSettings = storageService.getSettings();
-    const freshProfiles = storageService.getProfiles();
-    const freshMovements = storageService.getMovements();
-
-    storageService.saveToHardDrive({
-      products: freshProducts,
-      transactions: freshTransactions,
-      expenses: freshExpenses,
-      settings: freshSettings,
-      profiles: freshProfiles,
-      movements: freshMovements,
-    });
-
-    setProducts(freshProducts);
-    setTransactions(freshTransactions);
-    setExpenses(freshExpenses);
-    setSettings(freshSettings);
-    setProfiles(freshProfiles);
+    setProducts(storageService.getProducts());
+    setTransactions(storageService.getTransactions());
+    setExpenses(storageService.getExpenses());
+    setSettings(storageService.getSettings());
+    setProfiles(storageService.getProfiles());
     setActiveProfileId('prof-owner');
-    setMovements(freshMovements);
+    setMovements(storageService.getMovements());
     setHeldOrders([]);
     clearCart();
   };
@@ -1062,29 +1020,13 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const importDatabaseBackup = (jsonStr: string) => {
     const success = storageService.importBackup(jsonStr);
     if (success) {
-      const freshProducts = storageService.getProducts();
-      const freshTransactions = storageService.getTransactions();
-      const freshExpenses = storageService.getExpenses();
-      const freshSettings = storageService.getSettings();
-      const freshProfiles = storageService.getProfiles();
-      const freshMovements = storageService.getMovements();
-
-      storageService.saveToHardDrive({
-        products: freshProducts,
-        transactions: freshTransactions,
-        expenses: freshExpenses,
-        settings: freshSettings,
-        profiles: freshProfiles,
-        movements: freshMovements,
-      });
-
-      setProducts(freshProducts);
-      setTransactions(freshTransactions);
-      setExpenses(freshExpenses);
-      setSettings(freshSettings);
-      setProfiles(freshProfiles);
+      setProducts(storageService.getProducts());
+      setTransactions(storageService.getTransactions());
+      setExpenses(storageService.getExpenses());
+      setSettings(storageService.getSettings());
+      setProfiles(storageService.getProfiles());
       setActiveProfileId(storageService.getActiveProfileId());
-      setMovements(freshMovements);
+      setMovements(storageService.getMovements());
       return true;
     }
     return false;
@@ -1093,9 +1035,9 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Compute Today's Financial & Sales KPIs
   const todayStats = useMemo(() => {
-    const todayStr = getLocalDateStr();
+    const todayStr = new Date().toISOString().slice(0, 10);
     const todayTransactions = transactions.filter(
-      (t) => isSameDayAsDateStr(t.timestamp, todayStr) && t.status === 'completed'
+      (t) => t.timestamp.startsWith(todayStr) && t.status === 'completed'
     );
     const todayExpensesList = expenses.filter((e) => e.date === todayStr);
 
@@ -1153,9 +1095,9 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Generate End-of-Day Report for any selected date
   const generateEndOfDayReport = (targetDate?: string): EndOfDayReport => {
-    const reportDate = targetDate || getLocalDateStr();
+    const reportDate = targetDate || new Date().toISOString().slice(0, 10);
     const dateTransactions = transactions.filter(
-      (t) => isSameDayAsDateStr(t.timestamp, reportDate)
+      (t) => t.timestamp.startsWith(reportDate)
     );
     const completedTx = dateTransactions.filter((t) => t.status === 'completed');
     const refundedTx = dateTransactions.filter((t) => t.status === 'refunded');
@@ -1306,6 +1248,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         quickSwitchToStaff,
         updateProfilePin,
         updateProfileName,
+        updateProfileDetails,
 
         // Manual Product Catalog addition (Owner)
         isAddProductModalOpen,

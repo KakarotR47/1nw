@@ -6,11 +6,8 @@ export function renderReceiptSlipHtml(
   customSettings?: Partial<ShopSettings>
 ): string {
   const shopName = customSettings?.shopName || 'S.A. BROTHERS VENDORS';
-  const tagline = customSettings?.tagline || 'Court Stamp Vendors & Legal Paper';
-  const address = customSettings?.address || 'Shop #14, District Court Complex, Main Law Bazaar';
   const phone = customSettings?.phone || '+92 (300) 582-9011';
   const taxNumber = customSettings?.taxNumber || 'PK-NTN-8924018';
-  const currency = customSettings?.currency || 'PKR';
   const headerNote = customSettings?.receiptHeader || 'Thank you for choosing SA Brothers Vendors!';
   const footerNote = customSettings?.receiptFooter || 'Court stamp papers & legal forms verified authentic. Shukriya!';
 
@@ -25,8 +22,7 @@ export function renderReceiptSlipHtml(
   });
 
   const formatPkr = (amt: number) => {
-    const num = Number(amt || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return currency.length > 1 ? `${currency} ${num}` : `${currency}${num}`;
+    return `PKR ${amt.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const totalItemsCount = transaction.items.reduce((acc, i) => acc + i.quantity, 0);
@@ -339,21 +335,14 @@ export function renderReceiptSlipHtml(
         <img src="${SA_BROTHERS_LOGO_DATA_URL}" alt="Logo" class="logo-img" width="56" height="56" />
       </div>
       <h1 class="shop-title">${shopName.toUpperCase()}</h1>
-      <p class="shop-sub">${tagline}</p>
-      <p class="shop-address">${address}</p>
+      <p class="shop-sub">Court Stamp Vendors &amp; Legal Paper</p>
+      <p class="shop-address">Shop #14, District Court Complex, Main Law Bazaar</p>
       <p class="shop-address font-mono">Tel: ${phone} · NTN: ${taxNumber}</p>
       
       <div class="reg-badge">
         <span>LIC # KHI-786/STP</span>
         <span>DISTRICT &amp; SESSIONS COURTS</span>
       </div>
-      ${
-        transaction.status === 'refunded'
-          ? `<div style="border: 1.5px solid #dc2626; background: #fef2f2; color: #991b1b; padding: 3px 6px; font-size: 8.5px; font-family: monospace; font-weight: bold; margin: 4px 0;">STATUS: REFUNDED ${
-              transaction.refundReason ? `(${transaction.refundReason})` : ''
-            }</div>`
-          : ''
-      }
     </div>
 
     <div class="divider-solid"></div>

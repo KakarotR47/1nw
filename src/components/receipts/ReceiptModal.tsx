@@ -242,15 +242,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div>
               <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <span>80mm POS Receipt</span>
-                {transaction.status === 'refunded' ? (
-                  <span className="text-[9px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-1.5 rounded border border-rose-200 dark:border-rose-800">
-                    REFUNDED
-                  </span>
-                ) : (
-                  <span className="text-[9px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1 rounded border border-emerald-200 dark:border-emerald-800">
-                    PAID
-                  </span>
-                )}
+                <span className="text-[9px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1 rounded border border-emerald-200 dark:border-emerald-800">
+                  PAID
+                </span>
               </div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                 {transaction.receiptNumber} · 80mm Roll
@@ -352,14 +346,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </div>
 
                 <div className="pt-0.5">
-                  <h1 className="text-sm font-black tracking-tight text-slate-950 font-serif leading-tight uppercase">
-                    {settings.shopName || 'S.A. BROTHERS VENDORS'}
+                  <h1 className="text-sm font-black tracking-tight text-slate-950 font-serif leading-tight">
+                    S.A. BROTHERS VENDORS
                   </h1>
                   <p className="text-[9.5px] font-bold uppercase tracking-wider text-amber-800">
-                    {settings.tagline || 'Court Stamp Vendors & Legal Paper'}
+                    Court Stamp Vendors &amp; Legal Paper
                   </p>
                   <p className="text-[8.5px] text-slate-600 leading-snug">
-                    {settings.address || 'Shop #14, District Court Complex, Main Law Bazaar'}
+                    Shop #14, District Court Complex, Main Law Bazaar
                   </p>
                   <p className="text-[8.5px] text-slate-600 font-mono">
                     Tel: {settings.phone} {settings.taxNumber ? `· NTN: ${settings.taxNumber}` : ''}
@@ -372,12 +366,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <span>DISTRICT &amp; SESSIONS COURTS</span>
                   </div>
                 </div>
-
-                {transaction.status === 'refunded' && (
-                  <div className="mt-1 bg-rose-100 border border-rose-400 rounded py-1 px-2 text-[9px] font-mono font-bold text-rose-900">
-                    STATUS: REFUNDED {transaction.refundReason ? `(${transaction.refundReason})` : ''}
-                  </div>
-                )}
               </div>
 
               {/* RECEIPT METADATA BLOCK */}

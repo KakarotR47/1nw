@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useShop } from '../../context/ShopContext';
-import { getLocalDateStr } from '../../services/storage';
 import { Expense, ExpenseCategory } from '../../types';
 import {
   Wallet,
@@ -36,7 +35,7 @@ export const ExpenseLedger: React.FC = () => {
 
   // Add Expense form
   const [formData, setFormData] = useState({
-    date: getLocalDateStr(),
+    date: new Date().toISOString().slice(0, 10),
     category: 'Packaging & Supplies' as ExpenseCategory,
     description: '',
     amount: '',
@@ -46,7 +45,7 @@ export const ExpenseLedger: React.FC = () => {
 
   // Calculate expense statistics
   const stats = useMemo(() => {
-    const todayStr = getLocalDateStr();
+    const todayStr = new Date().toISOString().slice(0, 10);
     const thisMonthStr = todayStr.slice(0, 7);
 
     let todayTotal = 0;
@@ -111,7 +110,7 @@ export const ExpenseLedger: React.FC = () => {
 
     setIsAddModalOpen(false);
     setFormData({
-      date: getLocalDateStr(),
+      date: new Date().toISOString().slice(0, 10),
       category: 'Packaging & Supplies',
       description: '',
       amount: '',

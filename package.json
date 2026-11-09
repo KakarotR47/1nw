@@ -1,13 +1,12 @@
 {
-  "name": "sa-brothers-vendors-pos",
+  "name": "react-example",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
-    "build:exe": "vite build && node scripts/build_windows_exe.mjs",
-    "start": "NODE_ENV=production tsx server.ts",
+    "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"

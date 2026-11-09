@@ -1,7 +1,7 @@
 import React from 'react';
 import { useShop } from '../../context/ShopContext';
 import { ActiveTab } from './Sidebar';
-import { Menu, AlertTriangle, Coins, Store, Lock, ShieldCheck, UserCheck, Plus, LogOut, MonitorDown } from 'lucide-react';
+import { Menu, AlertTriangle, Coins, Store, Lock, ShieldCheck, UserCheck, Plus, LogOut } from 'lucide-react';
 
 interface TopBarProps {
   activeTab: ActiveTab;
@@ -93,17 +93,6 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Right Status Indicators & Profile Control */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Download Standalone Windows .EXE App */}
-          <a
-            href="/api/download-exe"
-            download="SA_Brothers_POS.exe"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors shadow-2xs"
-            title="Download standalone Windows executable (SA_Brothers_POS.exe)"
-          >
-            <MonitorDown className="w-3.5 h-3.5" />
-            <span>Download PC App (.exe)</span>
-          </a>
-
           {/* Owner Quick Add Item button */}
           {isOwner && (
             <button

@@ -28,9 +28,9 @@ CREATE TABLE `profiles` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Seed default profiles (Owner PIN: 1234, Staff PIN: 0000)
+-- Seed default profiles (Owner PIN: 1080, Staff PIN: 0000)
 INSERT INTO `profiles` (`id`, `name`, `role`, `pin`, `title`, `avatar_color`) VALUES
-('prof-owner', 'Shop Owner (Admin)', 'owner', '1234', 'Owner - Full Administrative Access', 'from-amber-500 to-amber-700'),
+('prof-owner', 'Shop Owner (Admin)', 'owner', '1080', 'Owner - Full Administrative Access', 'from-amber-500 to-amber-700'),
 ('prof-staff', 'Staff Cashier', 'staff', '0000', 'Staff - Sales & Expenses', 'from-blue-500 to-indigo-600');
 
 -- --------------------------------------------------------

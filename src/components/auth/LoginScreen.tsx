@@ -9,28 +9,26 @@ import {
   AlertCircle,
   ShieldCheck,
   UserCheck,
-  MonitorDown,
+  HardDrive,
+  Database,
 } from 'lucide-react';
 import saBrothersLogo from '../../assets/images/sa_brothers_logo.jpg';
 
 export const LoginScreen: React.FC = () => {
-  const { login, settings } = useShop();
+  const { login, settings, profiles } = useShop();
 
-  const [username, setUsername] = useState<string>('staff');
-  const [password, setPassword] = useState<string>('staff');
+  const [selectedRole, setSelectedRole] = useState<'owner' | 'staff'>('owner');
+  const [username, setUsername] = useState<string>('owner');
+  const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [selectedRoleHint, setSelectedRoleHint] = useState<'staff' | 'owner'>('staff');
 
-  const handleSelectRole = (role: 'staff' | 'owner') => {
-    setSelectedRoleHint(role);
-    if (role === 'staff') {
-      setUsername('staff');
-      setPassword('staff');
-    } else {
-      setUsername('owner');
-      setPassword('owner');
-    }
+  const ownerProfile = profiles.find((p) => p.role === 'owner');
+
+  const handleSelectRole = (role: 'owner' | 'staff') => {
+    setSelectedRole(role);
+    setUsername(role);
+    setPassword('');
     setErrorMessage(null);
   };
 
@@ -40,12 +38,20 @@ export const LoginScreen: React.FC = () => {
     }
     setErrorMessage(null);
 
-    const trimmedUser = username.trim() || selectedRoleHint;
     const trimmedPass = password.trim();
+    if (!trimmedPass) {
+      setErrorMessage(
+        selectedRole === 'owner'
+          ? 'Please enter your Owner password.'
+          : 'Please enter your Staff password.'
+      );
+      return;
+    }
 
+    const trimmedUser = username.trim() || selectedRole;
     const result = login(trimmedUser, trimmedPass);
     if (!result.success) {
-      setErrorMessage(result.message || 'Invalid username or password/PIN');
+      setErrorMessage(result.message || 'Invalid password.');
     }
   };
 
@@ -66,7 +72,7 @@ export const LoginScreen: React.FC = () => {
 
       <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 backdrop-blur-md relative z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Branding Header */}
-        <div className="text-center space-y-3 mb-5">
+        <div className="text-center space-y-3 mb-6">
           <div className="w-20 h-20 mx-auto rounded-full p-1 bg-gradient-to-tr from-amber-500 to-amber-200 shadow-lg flex items-center justify-center overflow-hidden">
             <img
               src={saBrothersLogo}
@@ -80,67 +86,89 @@ export const LoginScreen: React.FC = () => {
               <span>{settings.shopName || 'SA Brothers Vendors'}</span>
             </h1>
             <p className="text-xs text-amber-400 font-medium mt-0.5">
-              {settings.tagline || 'Court Stamp Vendors, Legal Paper & Stationery'}
+              Court Stamp Vendors, Legal Paper &amp; Stationery
             </p>
             <p className="text-[11px] text-slate-400 mt-1">
-              Point of Sale &amp; Retail Inventory Management
+              Point of Sale &amp; Offline Retail Inventory
             </p>
           </div>
         </div>
 
-        {/* Quick Role Switcher Tabs */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/80 border border-slate-800 rounded-2xl mb-4">
-          <button
-            type="button"
-            onClick={() => handleSelectRole('staff')}
-            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              selectedRoleHint === 'staff'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/50'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Staff Cashier</span>
-          </button>
+        {/* Role Selector Tabs */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-800/80 border border-slate-700/60 rounded-2xl mb-5">
           <button
             type="button"
             onClick={() => handleSelectRole('owner')}
-            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              selectedRoleHint === 'owner'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-950/50'
-                : 'text-slate-400 hover:text-slate-200'
+            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+              selectedRole === 'owner'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>👑</span>
             <span>Shop Owner</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectRole('staff')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+              selectedRole === 'staff'
+                ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            <span>👤</span>
+            <span>Staff Cashier</span>
           </button>
         </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Username Input */}
+          {/* Selected Role Badge / Description */}
+          <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/60 text-xs">
+            {selectedRole === 'owner' ? (
+              <div className="space-y-1">
+                <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <span>Owner Administration Access</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Full control: stock inventory, supplier prices, daily profit reports, expenses, and settings.
+                </p>
+                <div className="text-[11px] text-amber-400/90 pt-1 font-medium border-t border-slate-700/60">
+                  <span>🔒 Only the password configured in Store Settings is accepted (Initial: 1080).</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="font-bold text-blue-300 flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-blue-400" />
+                  <span>Staff Cashier Counter Access</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Counter mode: register sales, print receipts &amp; record expenses. Stock and profit reports are hidden.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Username Input (Hidden or Compact) */}
           <div>
             <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              <span>Username</span>
+              <span>Username / Role</span>
             </label>
             <input
               type="text"
               required
               value={username}
               onChange={(e) => {
-                const val = e.target.value;
-                setUsername(val);
-                const lower = val.trim().toLowerCase();
-                if (lower === 'owner' || lower === 'admin' || lower === 'shop owner') {
-                  setSelectedRoleHint('owner');
-                } else if (lower === 'staff' || lower === 'cashier') {
-                  setSelectedRoleHint('staff');
-                }
+                setUsername(e.target.value);
                 setErrorMessage(null);
               }}
-              placeholder="e.g. staff or owner"
-              className="w-full px-3.5 py-2.5 text-sm bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              placeholder={selectedRole === 'owner' ? 'owner' : 'staff'}
+              className="w-full px-3.5 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors font-mono"
             />
           </div>
 
@@ -149,7 +177,9 @@ export const LoginScreen: React.FC = () => {
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <KeyRound className="w-3.5 h-3.5 text-slate-400" />
-                <span>Password / PIN</span>
+                <span>
+                  {selectedRole === 'owner' ? 'Owner Password / PIN' : 'Staff Password / PIN'}
+                </span>
               </label>
               <button
                 type="button"
@@ -165,27 +195,32 @@ export const LoginScreen: React.FC = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoFocus
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setErrorMessage(null);
                 }}
-                placeholder="e.g. staff or owner (or PIN)"
+                placeholder={
+                  selectedRole === 'owner'
+                    ? 'Enter Owner password'
+                    : 'Enter Staff password'
+                }
                 className="w-full px-3.5 py-2.5 text-sm font-mono tracking-wider bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
               />
             </div>
           </div>
 
-          {/* Quick Touch Keypad (0-9) for touchscreen counter */}
+          {/* Quick Touch Keypad for touchscreen counter use */}
           <div className="pt-1">
             <div className="text-[10px] text-slate-400 mb-1.5 flex items-center justify-between">
-              <span>Quick Counter Keypad:</span>
+              <span>Quick Touch Keypad:</span>
               <button
                 type="button"
                 onClick={() => setPassword('')}
                 className="text-amber-400 hover:underline"
               >
-                Clear PIN
+                Clear
               </button>
             </div>
             <div className="grid grid-cols-4 gap-1.5">
@@ -208,17 +243,11 @@ export const LoginScreen: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (selectedRoleHint === 'staff') {
-                    setPassword('staff');
-                  } else {
-                    setPassword('owner');
-                  }
-                }}
-                className="py-1.5 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/50 text-[10px] font-bold rounded-lg border border-emerald-800"
-                title="Fill default password"
+                onClick={() => setPassword('')}
+                className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700/60"
+                title="Clear input"
               >
-                Auto
+                Clear
               </button>
             </div>
           </div>
@@ -234,30 +263,22 @@ export const LoginScreen: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
+            onClick={() => handleSubmit()}
             className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <LogIn className="w-4 h-4" />
-            <span>Sign In to Register</span>
+            <span>Sign In as {selectedRole === 'owner' ? 'Owner' : 'Staff'}</span>
           </button>
         </form>
-
-        {/* Direct Windows .EXE Download Link */}
-        <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-center">
-          <a
-            href="/api/download-exe"
-            download="SA_Brothers_POS.exe"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-all"
-          >
-            <MonitorDown className="w-3.5 h-3.5" />
-            <span>Download Windows Desktop App (.exe)</span>
-          </a>
-        </div>
       </div>
 
-      {/* Footer Offline Notice */}
+      {/* Footer Offline Database Notice */}
       <div className="text-center text-[11px] text-slate-500 mt-6 space-y-1">
-        <p>🔒 100% Offline Ready · Real-time Hard Drive &amp; Local Persistence</p>
-        <p>All data is automatically synchronized and protected against power cuts</p>
+        <p className="flex items-center justify-center gap-1.5 font-medium text-slate-400">
+          <Database className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Proper Offline Database Engine (IndexedDB + Hard Disk Storage)</span>
+        </p>
+        <p>All stock, sales, expenses, and passwords survive power cuts, restarts, and offline mode</p>
       </div>
     </div>
   );

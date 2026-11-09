@@ -21,7 +21,7 @@ export const DeviceLockScreen: React.FC = () => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (enteredPin.trim() !== (ownerProfile?.pin || '1234').trim()) {
+    if (enteredPin.trim() !== (ownerProfile?.pin || '1080').trim()) {
       setErrorMsg('Incorrect Owner PIN. Only the Store Owner can authorize this computer.');
       return;
     }
@@ -102,7 +102,7 @@ export const DeviceLockScreen: React.FC = () => {
               required
               value={enteredPin}
               onChange={(e) => setEnteredPin(e.target.value)}
-              placeholder="Enter Owner PIN (Default: 1234)"
+              placeholder="Enter Owner Password / PIN"
               className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono font-bold tracking-widest focus:outline-none focus:border-emerald-500 text-center"
             />
           </div>

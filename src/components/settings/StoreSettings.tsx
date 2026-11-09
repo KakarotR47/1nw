@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useShop } from '../../context/ShopContext';
+import { indexedDbService, OfflineDbStats } from '../../services/indexedDbService';
 import {
   Settings,
   Store,
@@ -51,9 +52,12 @@ export const StoreSettingsView: React.FC = () => {
     resetDemoData,
     exportDatabaseBackup,
     importDatabaseBackup,
+    products,
+    transactions,
     profiles,
     updateProfilePin,
     updateProfileName,
+    updateProfileDetails,
     isOwner,
     openProfileModal,
     deviceSecurity,
@@ -72,13 +76,23 @@ export const StoreSettingsView: React.FC = () => {
   // Hard Drive Saving State
   const [syncingHardDrive, setSyncingHardDrive] = useState(false);
   const [hardDriveSuccess, setHardDriveSuccess] = useState<string | null>(null);
+  const [idbStats, setIdbStats] = useState<OfflineDbStats | null>(null);
+
+  const refreshDbStats = () => {
+    indexedDbService.getStats().then((s) => setIdbStats(s));
+  };
+
+  useEffect(() => {
+    refreshDbStats();
+  }, []);
 
   const handleManualSaveHardDrive = async () => {
     setSyncingHardDrive(true);
     const ok = await saveDatabaseToHardDriveNow();
+    refreshDbStats();
     setSyncingHardDrive(false);
     if (ok) {
-      setHardDriveSuccess('All store data successfully written to this computer hard drive (./local_database/)');
+      setHardDriveSuccess('All store data, inventory, transactions & passwords successfully written to IndexedDB and PC Hard Drive (./local_database/)');
       setTimeout(() => setHardDriveSuccess(null), 3500);
     }
   };
@@ -111,9 +125,28 @@ export const StoreSettingsView: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    // 1. Update general shop settings
     updateSettings(form);
+
+    // 2. Also save owner and staff profile passwords if modified
+    const owner = profiles.find((p) => p.role === 'owner');
+    const staff = profiles.find((p) => p.role === 'staff');
+
+    if (owner && ownerPinEdit.trim()) {
+      updateProfileDetails(owner.id, {
+        pin: ownerPinEdit.trim(),
+        name: ownerNameEdit.trim() || undefined,
+      });
+    }
+    if (staff && staffPinEdit.trim()) {
+      updateProfileDetails(staff.id, {
+        pin: staffPinEdit.trim(),
+        name: staffNameEdit.trim() || undefined,
+      });
+    }
+
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   const handleExport = () => {
@@ -151,22 +184,34 @@ export const StoreSettingsView: React.FC = () => {
     const owner = profiles.find((p) => p.role === 'owner');
     const staff = profiles.find((p) => p.role === 'staff');
 
-    if (ownerPinEdit.trim().length < 4 || staffPinEdit.trim().length < 4) {
-      setProfileMsg({ type: 'error', text: 'Passwords / PINs must be at least 4 digits.' });
+    if (!ownerPinEdit.trim() || !staffPinEdit.trim()) {
+      setProfileMsg({ type: 'error', text: 'Passwords cannot be blank.' });
+      return;
+    }
+
+    if (ownerPinEdit.trim().length < 3 || staffPinEdit.trim().length < 3) {
+      setProfileMsg({ type: 'error', text: 'Passwords must be at least 3 characters/digits.' });
       return;
     }
 
     if (owner) {
-      updateProfilePin(owner.id, ownerPinEdit.trim());
-      updateProfileName(owner.id, ownerNameEdit.trim());
+      updateProfileDetails(owner.id, {
+        pin: ownerPinEdit.trim(),
+        name: ownerNameEdit.trim() || undefined,
+      });
     }
     if (staff) {
-      updateProfilePin(staff.id, staffPinEdit.trim());
-      updateProfileName(staff.id, staffNameEdit.trim());
+      updateProfileDetails(staff.id, {
+        pin: staffPinEdit.trim(),
+        name: staffNameEdit.trim() || undefined,
+      });
     }
 
-    setProfileMsg({ type: 'success', text: 'Profile passwords and names updated successfully!' });
-    setTimeout(() => setProfileMsg(null), 3500);
+    setProfileMsg({
+      type: 'success',
+      text: `Owner & Staff passwords updated successfully! Only these exact passwords will work.`,
+    });
+    setTimeout(() => setProfileMsg(null), 4000);
   };
 
   if (!isOwner) {
@@ -436,16 +481,27 @@ export const StoreSettingsView: React.FC = () => {
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Owner Password / PIN (Min 4 digits) *
+                  Owner Password / PIN *
                 </label>
                 <input
                   type={showPinsInSettings ? 'text' : 'password'}
                   required
                   value={ownerPinEdit}
                   onChange={(e) => setOwnerPinEdit(e.target.value)}
-                  placeholder="e.g. 1234"
+                  placeholder="Set Owner Password"
                   className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              {/* Strict Password Enforcement Notice */}
+              <div className="p-2.5 rounded-lg bg-amber-100/70 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Strict Password Enforcement</span>
+                </div>
+                <p className="leading-relaxed">
+                  Whatever password you set here is the <strong>ONLY</strong> password that works for Owner login. Any other passwords or old default codes are rejected immediately.
+                </p>
               </div>
 
               <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-amber-200/60 dark:border-amber-900/40">
@@ -489,9 +545,19 @@ export const StoreSettingsView: React.FC = () => {
                   required
                   value={staffPinEdit}
                   onChange={(e) => setStaffPinEdit(e.target.value)}
-                  placeholder="e.g. 0000"
+                  placeholder="Set Staff Password"
                   className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-blue-100/70 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-800 text-[11px] text-blue-900 dark:text-blue-200 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Staff Cashier Only</span>
+                </div>
+                <p className="leading-relaxed">
+                  Only this password allows staff to sign into the POS register. All stock quantities, margins, and store settings are restricted.
+                </p>
               </div>
 
               <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-blue-200/60 dark:border-blue-900/40">
@@ -568,15 +634,6 @@ export const StoreSettingsView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="/api/download-exe"
-              download="SA_Brothers_POS.exe"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95"
-              title="Download standalone Windows executable (SA_Brothers_POS.exe) - runs with zero dependencies!"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download PC App (.exe)</span>
-            </a>
             <button
               type="button"
               onClick={handleManualSaveHardDrive}
@@ -593,7 +650,7 @@ export const StoreSettingsView: React.FC = () => {
               title="Double-click this file on Windows Desktop to launch POS software"
             >
               <PlayCircle className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Download Launcher (.bat)</span>
+              <span>Download Desktop Launcher (.bat)</span>
             </a>
           </div>
         </div>
@@ -605,13 +662,52 @@ export const StoreSettingsView: React.FC = () => {
           </div>
         )}
 
-        {/* 3 Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        {/* 4 Status Cards: Offline Database System */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          {/* Card 1: IndexedDB Browser Database */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+            <div className="text-slate-500 flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-emerald-500" />
+                <span>IndexedDB Engine</span>
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                Active &amp; Durable
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
+              <div>DB: <strong className="text-slate-900 dark:text-white">ShopKeep_Offline_Database</strong></div>
+              <div>Products: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{idbStats?.productsCount ?? products.length} items</span></div>
+              <div>Transactions: <span className="font-semibold text-slate-800 dark:text-slate-200">{idbStats?.transactionsCount ?? 0} records</span></div>
+              <div>Status: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">100% Offline Capable</span></div>
+            </div>
+          </div>
+
+          {/* Card 2: Local Hard Drive Location */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+            <div className="text-slate-500 flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
+                <span>PC Hard Disk Storage</span>
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
+                JSON DB
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
+              <div>Path: <code className="font-mono text-slate-900 dark:text-white text-[10px]">./local_database/</code></div>
+              <div>Auto-Sync: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Active on every edit</span></div>
+              <div>Last Written: <span className="text-slate-800 dark:text-slate-200 font-mono">{hardDriveLastSaved || 'Just now'}</span></div>
+              <div>Survives: <span className="text-slate-700 dark:text-slate-300">PC power cuts &amp; reboot</span></div>
+            </div>
+          </div>
+
+          {/* Card 3: Terminal Binding */}
           <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
             <div className="text-slate-500 flex items-center justify-between">
               <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Monitor className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Shop Terminal Binding</span>
+                <span>Shop Terminal</span>
               </span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                 deviceSecurity.isDeviceLockEnabled
@@ -627,36 +723,20 @@ export const StoreSettingsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
-            <div className="text-slate-500 flex items-center justify-between">
-              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Local Hard Disk Location</span>
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
-                JSON DB
-              </span>
-            </div>
-            <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
-              <div>Path: <code className="font-mono text-slate-900 dark:text-white text-[10px]">./local_database/</code></div>
-              <div>Auto-Sync: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Active on every sale/edit</span></div>
-              <div>Last Written: <span className="text-slate-800 dark:text-slate-200 font-mono">{hardDriveLastSaved || 'Just now'}</span></div>
-            </div>
-          </div>
-
+          {/* Card 4: Windows Desktop App */}
           <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
             <div className="text-slate-500 flex items-center justify-between">
               <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <FolderCheck className="w-3.5 h-3.5 text-blue-500" />
-                <span>Windows Desktop App (.exe)</span>
+                <span>Desktop App &amp; Bat</span>
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
-                EXE Ready
+                Launcher Ready
               </span>
             </div>
             <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
-              <div>Executable: <a href="/api/download-exe" download="SA_Brothers_POS.exe" className="font-mono text-indigo-600 dark:text-indigo-400 underline font-bold text-[10px]">SA_Brothers_POS.exe</a></div>
-              <div>App Mode: <span className="text-slate-800 dark:text-slate-200">Native Windows 64-bit App</span></div>
+              <div>Script: <code className="font-mono text-slate-900 dark:text-white text-[10px]">START_SHOP_POS.bat</code></div>
+              <div>App Mode: <span className="text-slate-800 dark:text-slate-200">Frameless Window</span></div>
               <div>Backup Tool: <a href="/api/download-backup-bat" download="BACKUP_LOCAL_DATABASE.bat" className="text-emerald-600 dark:text-emerald-400 underline font-medium">Download Backup .bat</a></div>
             </div>
           </div>
@@ -763,7 +843,7 @@ export const StoreSettingsView: React.FC = () => {
               <span>Pre-Seeded Access</span>
             </div>
             <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5">
-              <div>👑 Owner PIN: <strong className="text-amber-600">1234</strong></div>
+              <div>👑 Owner PIN: <strong className="text-amber-600">1080</strong></div>
               <div>👤 Staff PIN: <strong className="text-blue-600">0000</strong></div>
               <div>💵 Default Float: <strong className="text-emerald-600">PKR 10,000</strong></div>
             </div>

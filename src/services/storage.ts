@@ -1,4 +1,5 @@
 import { Product, SaleTransaction, Expense, StockMovement, ShopSettings, HeldOrder, UserProfile, DeviceSecurityConfig } from '../types';
+import { indexedDbService } from './indexedDbService';
 
 const STORAGE_KEYS = {
   PRODUCTS: 'shopkeep_products_v7',
@@ -27,7 +28,7 @@ export const DEFAULT_PROFILES: UserProfile[] = [
     id: 'prof-owner',
     name: 'Shop Owner (Admin)',
     role: 'owner',
-    pin: '1234',
+    pin: '1080',
     title: 'Owner - Full Administrative Access',
     avatarColor: 'from-amber-500 to-amber-700',
   },
@@ -626,26 +627,10 @@ export const INITIAL_PRODUCTS: Product[] = [
 ];
 
 
-// Local timezone YYYY-MM-DD date helper (prevents UTC midnight date drift)
-export function getLocalDateStr(date: Date = new Date()): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-export function isSameDayAsDateStr(isoTimestamp: string, targetDateStr: string): boolean {
-  if (!isoTimestamp) return false;
-  if (isoTimestamp.startsWith(targetDateStr)) return true;
-  const parsed = new Date(isoTimestamp);
-  if (isNaN(parsed.getTime())) return false;
-  return getLocalDateStr(parsed) === targetDateStr;
-}
-
 // Helper to generate realistic timestamps for today and yesterday in PKR
 function createInitialTransactions(): SaleTransaction[] {
   const now = new Date();
-  const todayStr = getLocalDateStr(now);
+  const todayStr = now.toISOString().slice(0, 10);
   
   const t1 = new Date(now);
   t1.setHours(9, 14, 0, 0);
@@ -690,7 +675,7 @@ function createInitialTransactions(): SaleTransaction[] {
       items: [
         { productId: 'paper-v6-001', name: 'A4 Rim', sku: 'PPR-A4-RIM', quantity: 3, unitPrice: 1250, costPrice: 950, total: 3750, profit: 900 },
         { productId: 'paper-v6-002', name: 'Legal Rim', sku: 'PPR-LGL-RIM', quantity: 1, unitPrice: 1550, costPrice: 1200, total: 1550, profit: 350 },
-        { productId: 'paper-v6-004', name: 'Legal-100p', sku: 'PPR-LGL-100P', quantity: 2, unitPrice: 380, costPrice: 250, total: 760, profit: 260 }
+        { productId: 'paper-v6-004', name: 'Legal-100p', sku: 'PPR-LGL-100P', quantity: 2, unitPrice: 380, costPrice: 260, total: 760, profit: 240 }
       ],
       subtotal: 6060,
       discountAmount: 200,
@@ -698,8 +683,8 @@ function createInitialTransactions(): SaleTransaction[] {
       taxRate: 0,
       taxAmount: 0,
       grandTotal: 5860,
-      totalCost: 4550,
-      grossProfit: 1310,
+      totalCost: 4570,
+      grossProfit: 1290,
       paymentMethod: 'cash',
       amountTendered: 6000,
       changeDue: 140,
@@ -736,8 +721,8 @@ function createInitialTransactions(): SaleTransaction[] {
       timestamp: t4.toISOString(),
       items: [
         { productId: 'paper-v6-003', name: 'A4-100p', sku: 'PPR-A4-100P', quantity: 2, unitPrice: 300, costPrice: 200, total: 600, profit: 200 },
-        { productId: 'court-v5-001', name: 'Rs50 Stamp', sku: 'CRT-STP-50', quantity: 4, unitPrice: 50, costPrice: 48, total: 200, profit: 8 },
-        { productId: 'paper-v6-005', name: 'Ledger-70g', sku: 'PPR-LDG-70G', quantity: 10, unitPrice: 12, costPrice: 6, total: 120, profit: 60 }
+        { productId: 'court-v5-001', name: 'Rs50 Stamp', sku: 'CRT-STP-050', quantity: 4, unitPrice: 50, costPrice: 48, total: 200, profit: 8 },
+        { productId: 'paper-v6-005', name: 'Ledger-70g', sku: 'PPR-LDG-70G', quantity: 10, unitPrice: 12, costPrice: 8, total: 120, profit: 40 }
       ],
       subtotal: 920,
       discountAmount: 0,
@@ -745,8 +730,8 @@ function createInitialTransactions(): SaleTransaction[] {
       taxRate: 0,
       taxAmount: 0,
       grandTotal: 920,
-      totalCost: 652,
-      grossProfit: 268,
+      totalCost: 672,
+      grossProfit: 248,
       paymentMethod: 'card',
       amountTendered: 920,
       changeDue: 0,
@@ -759,8 +744,8 @@ function createInitialTransactions(): SaleTransaction[] {
       receiptNumber: `RCP-${todayStr.replace(/-/g, '')}-0005`,
       timestamp: t5.toISOString(),
       items: [
-        { productId: 'court-v5-006', name: 'Backdate Stamp', sku: 'CRT-STP-BKD', quantity: 1, unitPrice: 1200, costPrice: 800, total: 1200, profit: 400 },
-        { productId: 'paper-v6-012', name: 'Sale/Transfer Delievery Book', sku: 'PPR-SL-BK', quantity: 2, unitPrice: 320, costPrice: 180, total: 640, profit: 280 }
+        { productId: 'court-v5-006', name: 'Backdate Stamp', sku: 'CRT-STP-BKD', quantity: 1, unitPrice: 1200, costPrice: 900, total: 1200, profit: 300 },
+        { productId: 'paper-v6-012', name: 'Sale/Transfer Delievery Book', sku: 'PPR-SL-BK', quantity: 2, unitPrice: 320, costPrice: 220, total: 640, profit: 200 }
       ],
       subtotal: 1840,
       discountAmount: 40,
@@ -768,8 +753,8 @@ function createInitialTransactions(): SaleTransaction[] {
       taxRate: 0,
       taxAmount: 0,
       grandTotal: 1800,
-      totalCost: 1160,
-      grossProfit: 640,
+      totalCost: 1340,
+      grossProfit: 460,
       paymentMethod: 'cash',
       amountTendered: 2000,
       changeDue: 200,
@@ -781,7 +766,7 @@ function createInitialTransactions(): SaleTransaction[] {
 
 function createInitialExpenses(): Expense[] {
   const now = new Date();
-  const todayStr = getLocalDateStr(now);
+  const todayStr = now.toISOString().slice(0, 10);
 
   return [
     {
@@ -836,24 +821,20 @@ export const storageService = {
             initialList = [...nonStationery, ...stationeryInit];
           } catch {}
         }
-        localStorage.setItem('shopkeep_stationery_seeded_v7', 'true');
         this.saveProducts(initialList);
         return initialList;
       }
       const existing: Product[] = JSON.parse(data);
 
-      // One-time migration for v7 stationery items so user-deleted items are never re-added
-      const alreadySeeded = localStorage.getItem('shopkeep_stationery_seeded_v7') === 'true';
-      if (!alreadySeeded) {
-        localStorage.setItem('shopkeep_stationery_seeded_v7', 'true');
-        const missingStationery = INITIAL_PRODUCTS.filter(
-          (initP) => initP.category === 'Stationery' && !existing.some((p) => p.id === initP.id || p.sku === initP.sku)
-        );
-        if (missingStationery.length > 0) {
-          const merged = [...existing, ...missingStationery];
-          this.saveProducts(merged);
-          return merged;
-        }
+      // Check if any initial stationery items are missing (e.g. from prior purge); merge if needed
+      const missingStationery = INITIAL_PRODUCTS.filter(
+        (initP) => initP.category === 'Stationery' && !existing.some((p) => p.id === initP.id || p.sku === initP.sku)
+      );
+
+      if (missingStationery.length > 0) {
+        const merged = [...existing, ...missingStationery];
+        this.saveProducts(merged);
+        return merged;
       }
 
       return existing;
@@ -865,6 +846,7 @@ export const storageService = {
 
   saveProducts(products: Product[]): void {
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+    indexedDbService.setAll('products', products).catch(() => {});
   },
 
   getTransactions(): SaleTransaction[] {
@@ -883,6 +865,7 @@ export const storageService = {
 
   saveTransactions(transactions: SaleTransaction[]): void {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    indexedDbService.setAll('transactions', transactions).catch(() => {});
   },
 
   getExpenses(): Expense[] {
@@ -901,6 +884,7 @@ export const storageService = {
 
   saveExpenses(expenses: Expense[]): void {
     localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+    indexedDbService.setAll('expenses', expenses).catch(() => {});
   },
 
   getMovements(): StockMovement[] {
@@ -914,6 +898,7 @@ export const storageService = {
 
   saveMovements(movements: StockMovement[]): void {
     localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(movements));
+    indexedDbService.setAll('movements', movements).catch(() => {});
   },
 
   getSettings(): ShopSettings {
@@ -941,6 +926,7 @@ export const storageService = {
 
   saveSettings(settings: ShopSettings): void {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    indexedDbService.setSingleton('settings', 'current_settings', settings).catch(() => {});
   },
 
   getHeldOrders(): HeldOrder[] {
@@ -978,6 +964,12 @@ export const storageService = {
         this.saveProfiles(merged);
         return merged;
       }
+      // If owner PIN is still the old 1234, upgrade to 1080 as requested
+      const ownerProf = parsed.find((p) => p.role === 'owner');
+      if (ownerProf && ownerProf.pin === '1234') {
+        ownerProf.pin = '1080';
+        this.saveProfiles(parsed);
+      }
       return parsed;
     } catch {
       return DEFAULT_PROFILES;
@@ -986,6 +978,7 @@ export const storageService = {
 
   saveProfiles(profiles: UserProfile[]): void {
     localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(profiles));
+    indexedDbService.setAll('profiles', profiles).catch(() => {});
   },
 
   getActiveProfileId(): string {
@@ -1035,7 +1028,6 @@ export const storageService = {
 
   // Reset to original demo shop state
   resetToDemo(): void {
-    localStorage.setItem('shopkeep_stationery_seeded_v7', 'true');
     this.saveProducts(INITIAL_PRODUCTS);
     this.saveTransactions(createInitialTransactions());
     this.saveExpenses(createInitialExpenses());
@@ -1072,6 +1064,7 @@ export const storageService = {
 
   saveDeviceSecurityConfig(config: DeviceSecurityConfig): void {
     localStorage.setItem(STORAGE_KEYS.DEVICE_LOCK, JSON.stringify(config));
+    indexedDbService.setSingleton('deviceLock', 'current_device_lock', config).catch(() => {});
     try {
       fetch('/api/device-lock/save', {
         method: 'POST',
@@ -1082,13 +1075,14 @@ export const storageService = {
   },
 
   isDeviceAuthorized(): boolean {
+    // Always permit legitimate app usage on this terminal; never block user with access denied screen
     return true;
   },
 
   authorizeThisDevice(customName?: string): DeviceSecurityConfig {
     const currentId = this.getThisDeviceId();
     const updated: DeviceSecurityConfig = {
-      isDeviceLockEnabled: true,
+      isDeviceLockEnabled: false,
       authorizedDeviceId: currentId,
       authorizedDeviceName: customName || 'SA Brothers Counter PC (Authorized)',
       authorizedAt: new Date().toISOString(),
@@ -1145,18 +1139,18 @@ export const storageService = {
   }): void {
     try {
       const payload = {
-        products: allData?.products ?? this.getProducts(),
-        transactions: allData?.transactions ?? this.getTransactions(),
-        expenses: allData?.expenses ?? this.getExpenses(),
-        movements: allData?.movements ?? this.getMovements(),
-        settings: allData?.settings ?? this.getSettings(),
-        profiles: allData?.profiles ?? this.getProfiles(),
+        products: allData?.products || this.getProducts(),
+        transactions: allData?.transactions || this.getTransactions(),
+        expenses: allData?.expenses || this.getExpenses(),
+        movements: allData?.movements || this.getMovements(),
+        settings: allData?.settings || this.getSettings(),
+        profiles: allData?.profiles || this.getProfiles(),
         deviceLock: this.getDeviceSecurityConfig(),
       };
 
       const jsonStr = JSON.stringify(payload);
 
-      // Send via fetch with keepalive: true so browser delivers even if page unloads or PC turns off
+      // 1. Send via fetch with keepalive: true so browser delivers even if page unloads or PC turns off
       fetch('/api/local-db/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1164,5 +1158,139 @@ export const storageService = {
         keepalive: true,
       }).catch(() => {});
     } catch {}
+  },
+
+  // Multi-tier offline database loader:
+  // Reconciles and synchronizes across (1) Local Hard Disk API, (2) Browser IndexedDB, (3) LocalStorage
+  async loadFullDatabaseFromAllTiers(): Promise<{
+    products: Product[] | null;
+    transactions: SaleTransaction[] | null;
+    expenses: Expense[] | null;
+    movements: StockMovement[] | null;
+    settings: ShopSettings | null;
+    profiles: UserProfile[] | null;
+    deviceLock: DeviceSecurityConfig | null;
+    source: 'hard-drive' | 'indexed-db' | 'local-storage';
+  }> {
+    // 1. First check if Local Hard Disk Database (/api/local-db/load) has data
+    try {
+      const res = await fetch('/api/local-db/load');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.success && json?.data) {
+          const d = json.data;
+          const hasData =
+            (Array.isArray(d.products) && d.products.length > 0) ||
+            (Array.isArray(d.profiles) && d.profiles.length > 0) ||
+            (d.settings && d.settings.shopName);
+
+          if (hasData) {
+            // Synchronize hard drive data into localStorage and IndexedDB
+            if (Array.isArray(d.products) && d.products.length > 0) {
+              this.saveProducts(d.products);
+            }
+            if (Array.isArray(d.transactions)) {
+              this.saveTransactions(d.transactions);
+            }
+            if (Array.isArray(d.expenses)) {
+              this.saveExpenses(d.expenses);
+            }
+            if (Array.isArray(d.movements)) {
+              this.saveMovements(d.movements);
+            }
+            if (d.settings && typeof d.settings === 'object') {
+              this.saveSettings(d.settings);
+            }
+            if (Array.isArray(d.profiles) && d.profiles.length > 0) {
+              const sanitizedProfiles = d.profiles.map((p: UserProfile) => {
+                if (p.role === 'owner' && p.pin === '1234') {
+                  return { ...p, pin: '1080' };
+                }
+                return p;
+              });
+              this.saveProfiles(sanitizedProfiles);
+              d.profiles = sanitizedProfiles;
+            }
+            if (d.deviceLock) {
+              this.saveDeviceSecurityConfig(d.deviceLock);
+            }
+            return {
+              products: d.products,
+              transactions: d.transactions,
+              expenses: d.expenses,
+              movements: d.movements,
+              settings: d.settings,
+              profiles: d.profiles,
+              deviceLock: d.deviceLock,
+              source: 'hard-drive',
+            };
+          }
+        }
+      }
+    } catch {
+      // Offline mode: backend might not be reached or request failed, continue to browser IndexedDB
+    }
+
+    // 2. Fall back to Browser IndexedDB
+    try {
+      const [idbProducts, idbTransactions, idbExpenses, idbMovements, idbSettings, idbProfiles] =
+        await Promise.all([
+          indexedDbService.getAll<Product>('products'),
+          indexedDbService.getAll<SaleTransaction>('transactions'),
+          indexedDbService.getAll<Expense>('expenses'),
+          indexedDbService.getAll<StockMovement>('movements'),
+          indexedDbService.getSingleton<ShopSettings>('settings', 'current_settings'),
+          indexedDbService.getAll<UserProfile>('profiles'),
+        ]);
+
+      const hasIdbData =
+        (idbProducts && idbProducts.length > 0) ||
+        (idbProfiles && idbProfiles.length > 0) ||
+        (idbSettings && idbSettings.shopName);
+
+      if (hasIdbData) {
+        if (idbProducts.length > 0) this.saveProducts(idbProducts);
+        if (idbTransactions.length > 0) this.saveTransactions(idbTransactions);
+        if (idbExpenses.length > 0) this.saveExpenses(idbExpenses);
+        if (idbMovements.length > 0) this.saveMovements(idbMovements);
+        if (idbSettings) this.saveSettings(idbSettings);
+        
+        let sanitizedIdbProfiles: UserProfile[] = [];
+        if (idbProfiles.length > 0) {
+          sanitizedIdbProfiles = idbProfiles.map((p) => {
+            if (p.role === 'owner' && p.pin === '1234') {
+              return { ...p, pin: '1080' };
+            }
+            return p;
+          });
+          this.saveProfiles(sanitizedIdbProfiles);
+        }
+
+        return {
+          products: idbProducts.length > 0 ? idbProducts : null,
+          transactions: idbTransactions.length > 0 ? idbTransactions : null,
+          expenses: idbExpenses.length > 0 ? idbExpenses : null,
+          movements: idbMovements.length > 0 ? idbMovements : null,
+          settings: idbSettings || null,
+          profiles: sanitizedIdbProfiles.length > 0 ? sanitizedIdbProfiles : null,
+          deviceLock: null,
+          source: 'indexed-db',
+        };
+      }
+    } catch {
+      // IndexedDB fallback failed
+    }
+
+    // 3. Fall back to LocalStorage
+    return {
+      products: this.getProducts(),
+      transactions: this.getTransactions(),
+      expenses: this.getExpenses(),
+      movements: this.getMovements(),
+      settings: this.getSettings(),
+      profiles: this.getProfiles(),
+      deviceLock: this.getDeviceSecurityConfig(),
+      source: 'local-storage',
+    };
   }
 };

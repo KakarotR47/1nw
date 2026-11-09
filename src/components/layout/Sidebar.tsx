@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   UserCheck,
   LogOut,
-  MonitorDown,
 } from 'lucide-react';
 import saBrothersLogo from '../../assets/images/sa_brothers_logo.jpg';
 
@@ -231,16 +230,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>+ Add Item to Catalog</span>
               </button>
             )}
-
-            <a
-              href="/api/download-exe"
-              download="SA_Brothers_POS.exe"
-              className="w-full py-2 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
-              title="Download standalone Windows executable (SA_Brothers_POS.exe)"
-            >
-              <MonitorDown className="w-3.5 h-3.5" />
-              <span>Download PC App (.exe)</span>
-            </a>
           </div>
 
           {/* Left Vertical Navigation List */}

@@ -7,7 +7,6 @@
 
 title SA Brothers Vendors POS - Local Terminal
 color 0A
-cd /d "%~dp0"
 
 echo.
 echo  ==============================================================
@@ -18,19 +17,13 @@ echo     Data Storage: Local Hard Drive (100%% Offline Ready)
 echo  ==============================================================
 echo.
 
-:: 0. If standalone SA_Brothers_POS.exe is present, launch it directly (zero dependencies!)
-if exist "SA_Brothers_POS.exe" (
-    echo [LAUNCH] Starting standalone Windows application SA_Brothers_POS.exe...
-    start "" "SA_Brothers_POS.exe"
-    exit /b
-)
-
-:: 1. Otherwise check if Node.js is installed on computer
+:: 1. Check if Node.js is installed on computer
 where node >nul 2>nul
 if %errorlevel% neq 0 (
     color 0C
-    echo [ERROR] SA_Brothers_POS.exe or Node.js was not found!
-    echo Please place SA_Brothers_POS.exe in this folder or install Node.js from https://nodejs.org
+    echo [ERROR] Node.js is not installed or not in PATH!
+    echo Please download and install Node.js (LTS version) from:
+    echo https://nodejs.org
     echo.
     pause
     exit /b
@@ -48,9 +41,9 @@ if not exist "node_modules\" (
     )
 )
 
-:: 3. Start local background server using tsx
+:: 3. Start local background server
 echo [1/3] Initializing local POS database engine on port 3000...
-start /B npx tsx server.ts > local_server.log 2>&1
+start /B node server.ts > local_server.log 2>&1
 
 :: Wait 3 seconds for local server to spin up
 echo [2/3] Waiting for local server to be ready...

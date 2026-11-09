@@ -61,17 +61,15 @@ export const ProfileModal: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // If switching to the exact same profile already active, just close
-    if (selectedProfileId === activeProfile.id) {
-      closeProfileModal();
-      return;
-    }
-
     const res = switchProfile(selectedProfileId, pinInput);
     if (!res.success) {
       setErrorMessage(res.message || 'Incorrect password / PIN');
     } else {
-      setSuccessMessage(`Switched to ${targetProfile.name}`);
+      setSuccessMessage(
+        selectedProfileId === activeProfile.id
+          ? `Verified ${targetProfile.name}`
+          : `Switched to ${targetProfile.name}`
+      );
       setTimeout(() => {
         closeProfileModal();
       }, 500);
@@ -109,15 +107,11 @@ export const ProfileModal: React.FC = () => {
 
   const handleQuickKeypad = (digit: string) => {
     if (mode === 'switch') {
-      if (pinInput.length < 8) {
-        setPinInput((prev) => prev + digit);
-        setErrorMessage(null);
-      }
+      setPinInput((prev) => prev + digit);
+      setErrorMessage(null);
     } else {
-      if (newPin.length < 8) {
-        setNewPin((prev) => prev + digit);
-        setErrorMessage(null);
-      }
+      setNewPin((prev) => prev + digit);
+      setErrorMessage(null);
     }
   };
 
@@ -258,7 +252,11 @@ export const ProfileModal: React.FC = () => {
                       setPinInput(e.target.value);
                       setErrorMessage(null);
                     }}
-                    placeholder="Enter 4-digit PIN (e.g. 1234 or 0000)"
+                    placeholder={
+                      targetProfile.role === 'owner'
+                        ? 'Enter Owner Password'
+                        : 'Enter Staff Password / PIN'
+                    }
                     autoFocus
                     className="w-full text-center tracking-widest text-lg font-bold font-mono py-2.5 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                   />
@@ -300,9 +298,13 @@ export const ProfileModal: React.FC = () => {
                 </button>
               </div>
 
-              {/* Default PIN Helper Tip */}
-              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
-                <span>Default PINs: <strong>Owner: 1234</strong> · <strong>Staff: 0000</strong></span>
+              {/* Password Helper Tip */}
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300">
+                {targetProfile.role === 'owner' ? (
+                  <span>🔒 Only the secret password configured in Store Settings is accepted for Owner access.</span>
+                ) : (
+                  <span>🔒 Enter the password set for Staff Cashier (Default: 0000).</span>
+                )}
               </div>
 
               {/* Error & Success Messages */}

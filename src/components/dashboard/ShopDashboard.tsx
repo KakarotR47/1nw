@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useShop } from '../../context/ShopContext';
-import { getLocalDateStr, isSameDayAsDateStr } from '../../services/storage';
 import {
   TrendingUp,
   DollarSign,
@@ -58,11 +57,11 @@ export const ShopDashboard: React.FC<{
   // Compute stats according to selected time range
   const rangeMetrics = useMemo(() => {
     const now = new Date();
-    const todayStr = getLocalDateStr(now);
+    const todayStr = now.toISOString().slice(0, 10);
 
     const yesterdayDate = new Date(now);
     yesterdayDate.setDate(now.getDate() - 1);
-    const yesterdayStr = getLocalDateStr(yesterdayDate);
+    const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
 
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(now.getDate() - 7);
@@ -74,10 +73,10 @@ export const ShopDashboard: React.FC<{
     let filteredExpenses = expenses;
 
     if (timeRange === 'today') {
-      filteredTransactions = filteredTransactions.filter((t) => isSameDayAsDateStr(t.timestamp, todayStr));
+      filteredTransactions = filteredTransactions.filter((t) => t.timestamp.startsWith(todayStr));
       filteredExpenses = filteredExpenses.filter((e) => e.date === todayStr);
     } else if (timeRange === 'yesterday') {
-      filteredTransactions = filteredTransactions.filter((t) => isSameDayAsDateStr(t.timestamp, yesterdayStr));
+      filteredTransactions = filteredTransactions.filter((t) => t.timestamp.startsWith(yesterdayStr));
       filteredExpenses = filteredExpenses.filter((e) => e.date === yesterdayStr);
     } else if (timeRange === '7days') {
       filteredTransactions = filteredTransactions.filter((t) => new Date(t.timestamp) >= sevenDaysAgo);
@@ -127,7 +126,7 @@ export const ShopDashboard: React.FC<{
   // Hourly curve breakdown for today
   const hourlyData = useMemo(() => {
     const hours = Array.from({ length: 14 }, (_, i) => i + 8); // 8:00 to 21:00
-    const todayStr = getLocalDateStr();
+    const todayStr = new Date().toISOString().slice(0, 10);
 
     return hours.map((hour) => {
       let sales = 0;
@@ -135,7 +134,7 @@ export const ShopDashboard: React.FC<{
       let items = 0;
 
       transactions
-        .filter((t) => t.status === 'completed' && isSameDayAsDateStr(t.timestamp, todayStr))
+        .filter((t) => t.status === 'completed' && t.timestamp.startsWith(todayStr))
         .forEach((tx) => {
           const txHour = new Date(tx.timestamp).getHours();
           if (txHour === hour) {
