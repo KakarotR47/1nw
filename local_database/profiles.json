@@ -11,7 +11,7 @@
     "id": "prof-staff",
     "name": "Staff Cashier",
     "role": "staff",
-    "pin": "0000",
+    "pin": "1234",
     "title": "Staff - Sales & Expenses",
     "avatarColor": "from-blue-500 to-indigo-600"
   }

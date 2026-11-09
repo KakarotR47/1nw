@@ -113,3 +113,17 @@ test('Staff password verification', () => {
   assert.equal(verifyLogin(profiles, 'staff', '1080').success, false);
   assert.equal(verifyLogin(profiles, 'staff', '0000').success, true);
 });
+
+test('Owner 1080 and Staff 1234 strict role isolation (no 1234 on Owner, no 0000 on Staff)', () => {
+  const profiles: UserProfile[] = [
+    { id: 'prof-owner', name: 'Shop Owner', role: 'owner', pin: '1080' },
+    { id: 'prof-staff', name: 'Staff Cashier', role: 'staff', pin: '1234' },
+  ];
+
+  assert.equal(verifyLogin(profiles, 'owner', '1234').success, false);
+  assert.equal(verifyLogin(profiles, 'owner', '0000').success, false);
+  assert.equal(verifyLogin(profiles, 'staff', '0000').success, false);
+  assert.equal(verifyLogin(profiles, 'staff', '1080').success, false);
+  assert.equal(verifyLogin(profiles, 'owner', '1080').success, true);
+  assert.equal(verifyLogin(profiles, 'staff', '1234').success, true);
+});

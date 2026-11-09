@@ -21,9 +21,25 @@ export const LoginScreen: React.FC = () => {
   const [pin, setPin] = useState<string>('');
   const [showPin, setShowPin] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState<number>(0);
 
   const ownerProfile = profiles.find((p) => p.role === 'owner');
   const staffProfile = profiles.find((p) => p.role === 'staff');
+
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          setErrorMessage(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockoutSeconds]);
 
   const handleSelectRole = (role: 'owner' | 'staff') => {
     setSelectedRole(role);
@@ -33,21 +49,40 @@ export const LoginScreen: React.FC = () => {
 
   const attemptLogin = useCallback(
     (pinToTry: string, roleToTry: 'owner' | 'staff') => {
+      if (lockoutSeconds > 0) {
+        setErrorMessage(`Security Lockout: Too many wrong PIN attempts. Wait ${lockoutSeconds}s.`);
+        setPin('');
+        return;
+      }
       if (pinToTry.length !== 4) {
         setErrorMessage('Please enter your complete 4-digit PIN.');
         return;
       }
       const result = login(roleToTry, pinToTry);
       if (!result.success) {
-        setErrorMessage(result.message || 'Incorrect 4-digit PIN');
         setPin('');
+        setFailedAttempts((prev) => {
+          const next = prev + 1;
+          if (next >= 5) {
+            setLockoutSeconds(15);
+            setErrorMessage('Security Lockout: 5 wrong PIN attempts! Terminal locked for 15 seconds.');
+            return 0;
+          }
+          setErrorMessage(
+            `${result.message || 'Incorrect 4-digit PIN'} (${5 - next} attempt${5 - next === 1 ? '' : 's'} remaining)`
+          );
+          return next;
+        });
+      } else {
+        setFailedAttempts(0);
       }
     },
-    [login]
+    [login, lockoutSeconds]
   );
 
   const handleDigitPress = useCallback(
     (digit: string) => {
+      if (lockoutSeconds > 0) return;
       setErrorMessage(null);
       setPin((prev) => {
         if (prev.length >= 4) return prev;
@@ -60,7 +95,7 @@ export const LoginScreen: React.FC = () => {
         return next;
       });
     },
-    [attemptLogin, selectedRole]
+    [attemptLogin, selectedRole, lockoutSeconds]
   );
 
   const handleBackspace = useCallback(() => {

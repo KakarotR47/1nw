@@ -203,7 +203,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               setSettings(mergedSettings);
             }
             if (Array.isArray(d.profiles) && d.profiles.length > 0) {
-              const userSavedInBrowser = localStorage.getItem('shopkeep_profiles_user_saved_v8') === 'true';
+              const userSavedInBrowser = localStorage.getItem('shopkeep_profiles_user_saved_v9') === 'true';
               if (userSavedInBrowser) {
                 const currentLocalProfiles = storageService.getProfiles();
                 setProfiles(currentLocalProfiles);
@@ -387,9 +387,15 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsThisDeviceAuthorized(true);
         return { success: true };
       }
+      if (p === staffPin) {
+        return {
+          success: false,
+          message: 'Access Denied: That is the Staff PIN. Enter the Owner 4-digit PIN to open Shop Owner.',
+        };
+      }
       return {
         success: false,
-        message: 'Incorrect Owner PIN. Only the exact 4-digit PIN saved for Shop Owner can unlock this profile.',
+        message: 'Access Denied: Incorrect Owner 4-digit PIN. Only the Owner PIN saved in Settings can unlock this profile.',
       };
     }
 
@@ -401,29 +407,21 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsThisDeviceAuthorized(true);
         return { success: true };
       }
+      if (p === ownerPin) {
+        return {
+          success: false,
+          message: 'Access Denied: That is the Owner PIN. Select Shop Owner or enter the Staff 4-digit PIN.',
+        };
+      }
       return {
         success: false,
-        message: 'Incorrect Staff PIN. Only the exact 4-digit PIN saved for Staff Cashier can unlock this profile.',
+        message: 'Access Denied: Incorrect Staff 4-digit PIN. Only the Staff PIN saved by Owner can unlock this profile.',
       };
-    }
-
-    // 3. Fallback exact match if no role specified
-    if (p === ownerPin) {
-      setActiveProfileId(ownerProfile.id);
-      setIsLoggedIn(true);
-      setIsThisDeviceAuthorized(true);
-      return { success: true };
-    }
-    if (p === staffPin) {
-      setActiveProfileId(staffProfile.id);
-      setIsLoggedIn(true);
-      setIsThisDeviceAuthorized(true);
-      return { success: true };
     }
 
     return {
       success: false,
-      message: 'Incorrect 4-digit PIN. Only the PIN saved in Profile Settings is accepted.',
+      message: 'Please select Shop Owner or Staff Cashier and enter the exact saved 4-digit PIN.',
     };
   };
 
@@ -446,14 +444,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     const currentStored = storageService.getProfiles();
     const updatedStored = currentStored.map((p) => (p.id === profileId ? { ...p, pin: cleaned } : p));
-    localStorage.setItem('shopkeep_profiles_user_saved_v8', 'true');
+    localStorage.setItem('shopkeep_profiles_user_saved_v9', 'true');
     storageService.saveProfiles(updatedStored);
-    storageService.saveToHardDrive({ profiles: updatedStored });
 
     setProfiles((prev) => {
       const next = prev.map((p) => (p.id === profileId ? { ...p, pin: cleaned } : p));
       storageService.saveProfiles(next);
-      storageService.saveToHardDrive({ profiles: next });
       return next;
     });
     return { success: true, message: '4-digit PIN updated successfully' };
@@ -464,14 +460,12 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!cleanedName) return;
     const currentStored = storageService.getProfiles();
     const updatedStored = currentStored.map((p) => (p.id === profileId ? { ...p, name: cleanedName } : p));
-    localStorage.setItem('shopkeep_profiles_user_saved_v8', 'true');
+    localStorage.setItem('shopkeep_profiles_user_saved_v9', 'true');
     storageService.saveProfiles(updatedStored);
-    storageService.saveToHardDrive({ profiles: updatedStored });
 
     setProfiles((prev) => {
       const next = prev.map((p) => (p.id === profileId ? { ...p, name: cleanedName } : p));
       storageService.saveProfiles(next);
-      storageService.saveToHardDrive({ profiles: next });
       return next;
     });
   };

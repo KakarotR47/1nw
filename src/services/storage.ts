@@ -7,7 +7,7 @@ const STORAGE_KEYS = {
   MOVEMENTS: 'shopkeep_movements_v6',
   SETTINGS: 'shopkeep_settings_v6',
   HELD_ORDERS: 'shopkeep_held_orders_v6',
-  PROFILES: 'shopkeep_profiles_v8',
+  PROFILES: 'shopkeep_profiles_v9',
   ACTIVE_PROFILE: 'shopkeep_active_profile_v7',
   DEVICE_LOCK: 'shopkeep_device_lock_v2',
   THIS_DEVICE_ID: 'shopkeep_machine_id_v2',
@@ -35,7 +35,7 @@ export const DEFAULT_PROFILES: UserProfile[] = [
     id: 'prof-staff',
     name: 'Staff Cashier',
     role: 'staff',
-    pin: '0000',
+    pin: '1234',
     title: 'Staff - Sales & Expenses',
     avatarColor: 'from-blue-500 to-indigo-600',
   },
@@ -959,6 +959,9 @@ export const storageService = {
   // Profiles and Permissions
   getProfiles(): UserProfile[] {
     try {
+      localStorage.removeItem('shopkeep_profiles_v6');
+      localStorage.removeItem('shopkeep_profiles_v7');
+      localStorage.removeItem('shopkeep_profiles_v8');
       const data = localStorage.getItem(STORAGE_KEYS.PROFILES);
       if (!data) {
         this.saveProfiles(DEFAULT_PROFILES);
@@ -986,6 +989,13 @@ export const storageService = {
 
   saveProfiles(profiles: UserProfile[]): void {
     localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(profiles));
+    try {
+      fetch('/api/local-db/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles }),
+      }).catch(() => {});
+    } catch {}
   },
 
   getActiveProfileId(): string {
@@ -1148,12 +1158,10 @@ export const storageService = {
 
       const jsonStr = JSON.stringify(payload);
 
-      // Send via fetch with keepalive: true so browser delivers even if page unloads or PC turns off
       fetch('/api/local-db/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: jsonStr,
-        keepalive: true,
       }).catch(() => {});
     } catch {}
   }

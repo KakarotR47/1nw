@@ -293,7 +293,8 @@ $backupDir = Join-Path $localDbDir 'backups'
 New-Item -ItemType Directory -Force -Path $localDbDir | Out-Null
 New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
 
-$port = 3080
+$port = 3088
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 function Open-PosAppWindow($url) {
   $browsers = @(
@@ -311,18 +312,16 @@ function Open-PosAppWindow($url) {
   Start-Process $url
 }
 
-# Check if POS server is already running on port 3080
-$testClient = New-Object System.Net.Sockets.TcpClient
+# Terminate any previous POS server instances on ports 3080 or 3088 so the latest EXE always runs
 try {
-  $iar = $testClient.BeginConnect('127.0.0.1', $port, $null, $null)
-  if ($iar.AsyncWaitHandle.WaitOne(250, $false) -and $testClient.Connected) {
-    $testClient.Close()
-    Open-PosAppWindow "http://127.0.0.1:$port"
-    exit 0
+  $conns = Get-NetTCPConnection -LocalPort 3080, 3088 -State Listen -ErrorAction SilentlyContinue
+  foreach ($c in $conns) {
+    if ($c.OwningProcess -and $c.OwningProcess -ne $PID) {
+      Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
   }
-} catch {} finally {
-  $testClient.Close()
-}
+  Start-Sleep -Milliseconds 200
+} catch {}
 
 # Decode embedded production web assets
 $assetsJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${assetsJsonB64}'))
@@ -335,8 +334,8 @@ function Read-LocalJsonFile($name, $fallbackJson) {
   $p = Join-Path $localDbDir $name
   if (Test-Path $p) {
     try {
-      $raw = [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8)
-      if ($raw.Trim().Length -gt 0) { return $raw }
+      $raw = [System.IO.File]::ReadAllText($p, $utf8NoBom).Trim().Trim([char]0xFEFF)
+      if ($raw.Length -gt 0) { return $raw }
     } catch {}
   }
   return $fallbackJson
@@ -345,8 +344,11 @@ function Read-LocalJsonFile($name, $fallbackJson) {
 function Write-LocalJsonObj($name, $obj) {
   if ($null -eq $obj) { return }
   $p = Join-Path $localDbDir $name
-  $json = ConvertTo-Json $obj -Depth 20
-  [System.IO.File]::WriteAllText($p, $json, [System.Text.Encoding]::UTF8)
+  $json = ConvertTo-Json -InputObject @($obj) -Depth 20
+  if (-not ($obj -is [System.Array])) {
+    $json = ConvertTo-Json -InputObject $obj -Depth 20
+  }
+  [System.IO.File]::WriteAllText($p, $json, $utf8NoBom)
 }
 
 function Send-HttpResponse($stream, [int]$statusCode, [string]$statusText, [string]$contentType, [byte[]]$bodyBytes, [hashtable]$extraHeaders = @{}) {
@@ -355,7 +357,7 @@ function Send-HttpResponse($stream, [int]$statusCode, [string]$statusText, [stri
   [void]$headerSb.Append("Content-Type: $contentType\`r\`n")
   [void]$headerSb.Append("Content-Length: $($bodyBytes.Length)\`r\`n")
   [void]$headerSb.Append("Connection: close\`r\`n")
-  [void]$headerSb.Append("Cache-Control: no-cache\`r\`n")
+  [void]$headerSb.Append("Cache-Control: no-store, no-cache, must-revalidate\`r\`n")
   foreach ($k in $extraHeaders.Keys) {
     [void]$headerSb.Append("\${k}: $($extraHeaders[$k])\`r\`n")
   }
@@ -460,7 +462,7 @@ while ($true) {
     elseif ($pathOnly -eq '/api/local-db/create-backup' -and $method -eq 'POST') {
       $ts = (Get-Date).ToString('yyyy-MM-dd_HH-mm-ss')
       $bp = Join-Path $backupDir "sa_brothers_backup_$ts.json"
-      [System.IO.File]::WriteAllText($bp, $bodyText, [System.Text.Encoding]::UTF8)
+      [System.IO.File]::WriteAllText($bp, $bodyText, $utf8NoBom)
       Send-JsonResponse $stream 200 '{"success":true,"message":"Backup created"}'
     }
     elseif ($pathOnly -eq '/api/device-lock') {
@@ -469,7 +471,7 @@ while ($true) {
     }
     elseif ($pathOnly -eq '/api/device-lock/save' -and $method -eq 'POST') {
       $p = Join-Path $localDbDir 'device_lock.json'
-      [System.IO.File]::WriteAllText($p, $bodyText, [System.Text.Encoding]::UTF8)
+      [System.IO.File]::WriteAllText($p, $bodyText, $utf8NoBom)
       Send-JsonResponse $stream 200 ('{"success":true,"data":' + $bodyText + '}')
     }
     elseif ($pathOnly -eq '/api/analyze-eod' -and $method -eq 'POST') {

@@ -109,8 +109,47 @@ export const StoreSettingsView: React.FC = () => {
     setForm({ ...settings });
   }, [settings]);
 
+  const applyProfileUpdates = (): boolean => {
+    setProfileMsg(null);
+    const owner = profiles.find((p) => p.role === 'owner');
+    const staff = profiles.find((p) => p.role === 'staff');
+
+    if (!/^\d{4}$/.test(ownerPinEdit.trim()) || !/^\d{4}$/.test(staffPinEdit.trim())) {
+      setProfileMsg({
+        type: 'error',
+        text: 'Both Owner and Staff PINs must be exactly 4 numeric digits (e.g. 1080, 1234).',
+      });
+      return false;
+    }
+
+    if (ownerPinEdit.trim() === staffPinEdit.trim()) {
+      setProfileMsg({
+        type: 'error',
+        text: 'Owner PIN and Staff PIN must be different 4-digit codes for strict security.',
+      });
+      return false;
+    }
+
+    if (owner) {
+      updateProfilePin(owner.id, ownerPinEdit.trim());
+      updateProfileName(owner.id, ownerNameEdit.trim());
+    }
+    if (staff) {
+      updateProfilePin(staff.id, staffPinEdit.trim());
+      updateProfileName(staff.id, staffNameEdit.trim());
+    }
+
+    setProfileMsg({
+      type: 'success',
+      text: `Saved! Owner PIN (${ownerPinEdit.trim()}) & Staff PIN (${staffPinEdit.trim()}) are now strictly enforced.`,
+    });
+    setTimeout(() => setProfileMsg(null), 4000);
+    return true;
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!applyProfileUpdates()) return;
     updateSettings(form);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
@@ -147,26 +186,7 @@ export const StoreSettingsView: React.FC = () => {
 
   const handleSaveProfiles = (e: React.FormEvent) => {
     e.preventDefault();
-    setProfileMsg(null);
-    const owner = profiles.find((p) => p.role === 'owner');
-    const staff = profiles.find((p) => p.role === 'staff');
-
-    if (!/^\d{4}$/.test(ownerPinEdit.trim()) || !/^\d{4}$/.test(staffPinEdit.trim())) {
-      setProfileMsg({ type: 'error', text: 'Both Owner and Staff PINs must be exactly 4 numeric digits (e.g. 1234, 0000).' });
-      return;
-    }
-
-    if (owner) {
-      updateProfilePin(owner.id, ownerPinEdit.trim());
-      updateProfileName(owner.id, ownerNameEdit.trim());
-    }
-    if (staff) {
-      updateProfilePin(staff.id, staffPinEdit.trim());
-      updateProfileName(staff.id, staffNameEdit.trim());
-    }
-
-    setProfileMsg({ type: 'success', text: 'Owner & Staff 4-digit PINs updated successfully!' });
-    setTimeout(() => setProfileMsg(null), 3500);
+    applyProfileUpdates();
   };
 
   if (!isOwner) {
