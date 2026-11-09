@@ -377,13 +377,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <p className="text-[10px] text-slate-400 leading-tight">
                       Inventory levels, daily profit, and settings are hidden in staff profile.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => openProfileModal('prof-owner')}
-                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline inline-block pt-0.5"
-                    >
-                      Unlock Owner Access →
-                    </button>
                   </div>
                 )}
               </div>
@@ -391,44 +384,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* Bottom Section: Profile Card, Cashier Status & Theme Toggle */}
+        {/* Bottom Section: Cashier Status & Theme Toggle */}
         <div className="p-3 border-t border-slate-100 dark:border-slate-800 space-y-2 bg-slate-50/50 dark:bg-slate-900/50">
-          {/* Active Profile Interactive Card */}
-          <button
-            type="button"
-            onClick={() => openProfileModal()}
-            className={`w-full p-2.5 rounded-2xl border text-left transition-all flex items-center justify-between group ${
-              isOwner
-                ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60 hover:bg-amber-100/60'
-                : 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/60 hover:bg-blue-100/60'
-            }`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
-                  isOwner
-                    ? 'bg-amber-500 text-white shadow-2xs'
-                    : 'bg-blue-600 text-white shadow-2xs'
-                }`}
-              >
-                {isOwner ? '👑' : '👤'}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
-                  <span>{activeProfile.name}</span>
-                </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                  {isOwner ? 'Owner (Full Access)' : 'Staff (Limited Mode)'}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white shrink-0">
-              <Lock className="w-3.5 h-3.5" />
-              <span>Switch</span>
-            </div>
-          </button>
-
           {/* Active Cashier Status & Dark Mode */}
           <div className="flex items-center justify-between text-xs px-1 pt-0.5">
             <div className="flex items-center gap-2 min-w-0">
