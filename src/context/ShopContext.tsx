@@ -149,8 +149,8 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentReceipt, setCurrentReceipt] = useState<SaleTransaction | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
 
-  // Authentication & Login Gate (Opens login screen on app launch)
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => storageService.getIsLoggedIn());
+  // Authentication & Login Gate (Always opens 4-digit PIN Login Panel on app launch)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // Profile & Access Control State
   const [profiles, setProfiles] = useState<UserProfile[]>(() => storageService.getProfiles());
@@ -332,14 +332,11 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const target = profiles.find((p) => p.id === profileId);
     if (!target) return { success: false, message: 'Profile not found' };
 
-    const pinClean = pin.trim().toLowerCase();
-    const targetPinClean = target.pin.trim().toLowerCase();
-    const isRoleMatch =
-      (target.role === 'owner' && (pinClean === 'owner' || pinClean === 'admin' || pinClean === targetPinClean)) ||
-      (target.role === 'staff' && (pinClean === 'staff' || pinClean === 'cashier' || pinClean === targetPinClean));
+    const pinClean = pin.trim();
+    const targetPinClean = target.pin.trim();
 
-    if (pinClean !== targetPinClean && !isRoleMatch) {
-      return { success: false, message: 'Incorrect password / PIN code' };
+    if (pinClean !== targetPinClean) {
+      return { success: false, message: 'Incorrect 4-digit PIN code' };
     }
 
     setActiveProfileId(profileId);
@@ -347,99 +344,68 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { success: true };
   };
 
-  const login = (usernameInput: string, passwordPinInput: string): { success: boolean; message?: string } => {
-    const u = usernameInput.trim().toLowerCase();
-    const p = passwordPinInput.trim().toLowerCase();
+  const login = (roleOrUserInput: string, pinInput: string): { success: boolean; message?: string } => {
+    const u = roleOrUserInput.trim().toLowerCase();
+    const p = pinInput.trim();
 
-    if (!p) {
-      return { success: false, message: 'Please enter your password or PIN.' };
+    if (!p || p.length < 4) {
+      return { success: false, message: 'Please enter your 4-digit PIN.' };
     }
 
     const staffProfile = profiles.find((prof) => prof.role === 'staff') || DEFAULT_PROFILES[1];
     const ownerProfile = profiles.find((prof) => prof.role === 'owner') || DEFAULT_PROFILES[0];
 
-    const staffPinLower = (staffProfile.pin || '0000').toLowerCase();
-    const ownerPinLower = (ownerProfile.pin || '1234').toLowerCase();
+    const staffPin = (staffProfile.pin || '0000').trim();
+    const ownerPin = (ownerProfile.pin || '1234').trim();
 
-    // Check staff indicators
-    const isStaffUser = u === 'staff' || u === 'cashier' || u === 'staff cashier' || u === 'user';
-    const isStaffPass = p === 'staff' || p === '0000' || p === 'cashier' || p === staffPinLower;
+    const isOwnerRole = u === 'owner' || u === 'prof-owner' || u === 'admin' || u === 'shop owner';
+    const isStaffRole = u === 'staff' || u === 'prof-staff' || u === 'cashier' || u === 'staff cashier';
 
-    // Check owner indicators
-    const isOwnerUser = u === 'owner' || u === 'admin' || u === 'shop owner' || u === 'manager' || u === 'kakarot' || u === 'khan' || u === 'boss';
-    const isOwnerPass = p === 'owner' || p === '1234' || p === 'admin' || p === ownerPinLower;
-
-    // 1. Explicit Owner username: must provide valid Owner password/PIN
-    if (isOwnerUser) {
-      if (isOwnerPass) {
+    // 1. Owner login by 4-digit PIN
+    if (isOwnerRole) {
+      if (p === ownerPin) {
         setActiveProfileId(ownerProfile.id);
         setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
         setIsThisDeviceAuthorized(true);
         return { success: true };
       }
       return {
         success: false,
-        message: `Incorrect password for Shop Owner. Use "${ownerProfile.pin}" or "owner".`,
+        message: 'Incorrect 4-digit PIN for Shop Owner.',
       };
     }
 
-    // 2. Explicit Staff username: must provide valid Staff password/PIN
-    if (isStaffUser) {
-      if (isStaffPass) {
+    // 2. Staff login by 4-digit PIN
+    if (isStaffRole) {
+      if (p === staffPin) {
         setActiveProfileId(staffProfile.id);
         setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
         setIsThisDeviceAuthorized(true);
         return { success: true };
       }
       return {
         success: false,
-        message: `Incorrect password for Staff Cashier. Use "${staffProfile.pin}" or "staff".`,
+        message: 'Incorrect 4-digit PIN for Staff Cashier.',
       };
     }
 
-    // 3. Match by custom profile name or ID
-    const customMatch = profiles.find(
-      (prof) => prof.name.toLowerCase() === u || prof.id.toLowerCase() === u
-    );
-    if (customMatch) {
-      const isCustomPass =
-        p === customMatch.pin.toLowerCase() ||
-        p === customMatch.role.toLowerCase() ||
-        (customMatch.role === 'owner' && isOwnerPass) ||
-        (customMatch.role === 'staff' && isStaffPass);
-      if (isCustomPass) {
-        setActiveProfileId(customMatch.id);
-        setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
-        setIsThisDeviceAuthorized(true);
-        return { success: true };
-      }
-      return { success: false, message: `Incorrect password / PIN for ${customMatch.name}` };
+    // 3. Fallback match by PIN
+    if (p === ownerPin) {
+      setActiveProfileId(ownerProfile.id);
+      setIsLoggedIn(true);
+      setIsThisDeviceAuthorized(true);
+      return { success: true };
     }
-
-    // 4. If username was left blank or generic, allow PIN-only quick login
-    if (!u) {
-      if (isOwnerPass) {
-        setActiveProfileId(ownerProfile.id);
-        setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
-        setIsThisDeviceAuthorized(true);
-        return { success: true };
-      }
-      if (isStaffPass) {
-        setActiveProfileId(staffProfile.id);
-        setIsLoggedIn(true);
-        storageService.setIsLoggedIn(true);
-        setIsThisDeviceAuthorized(true);
-        return { success: true };
-      }
+    if (p === staffPin) {
+      setActiveProfileId(staffProfile.id);
+      setIsLoggedIn(true);
+      setIsThisDeviceAuthorized(true);
+      return { success: true };
     }
 
     return {
       success: false,
-      message: 'Unknown username or password. Please use username "staff" (password: "staff") or "owner" (password: "owner").',
+      message: 'Incorrect 4-digit PIN. Please select Owner or Staff and enter your 4-digit PIN.',
     };
   };
 
@@ -456,14 +422,15 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateProfilePin = (profileId: string, newPin: string): { success: boolean; message?: string } => {
-    if (!newPin || newPin.trim().length < 4) {
-      return { success: false, message: 'Password / PIN must be at least 4 digits' };
+    const cleaned = (newPin || '').trim();
+    if (!/^\d{4}$/.test(cleaned)) {
+      return { success: false, message: 'PIN must be exactly 4 digits (0-9)' };
     }
-    const updated = profiles.map((p) => (p.id === profileId ? { ...p, pin: newPin.trim() } : p));
+    const updated = profiles.map((p) => (p.id === profileId ? { ...p, pin: cleaned } : p));
     storageService.saveProfiles(updated);
     storageService.saveToHardDrive({ profiles: updated });
     setProfiles(updated);
-    return { success: true, message: 'Password updated successfully' };
+    return { success: true, message: '4-digit PIN updated successfully' };
   };
 
   const updateProfileName = (profileId: string, newName: string) => {

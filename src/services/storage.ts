@@ -1110,27 +1110,19 @@ export const storageService = {
     return updated;
   },
 
-  // Authentication session helpers with fallback across sessionStorage & localStorage
+  // Authentication session helpers: always require 4-digit PIN login when opening the software
   getIsLoggedIn(): boolean {
     try {
-      const sVal = sessionStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
-      if (sVal === 'true') return true;
-      const lVal = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
-      return lVal === 'true';
-    } catch {
-      return false;
-    }
+      sessionStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+      localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+    } catch {}
+    return false;
   },
 
-  setIsLoggedIn(loggedIn: boolean): void {
+  setIsLoggedIn(_loggedIn: boolean): void {
     try {
-      if (loggedIn) {
-        sessionStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
-        localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
-      } else {
-        sessionStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
-        localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
-      }
+      sessionStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+      localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
     } catch {}
   },
 

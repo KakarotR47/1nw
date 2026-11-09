@@ -83,8 +83,8 @@ export const ProfileModal: React.FC = () => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    if (newPin.length < 4) {
-      setErrorMessage('Password / PIN must be at least 4 digits');
+    if (!/^\d{4}$/.test(newPin.trim())) {
+      setErrorMessage('PIN must be exactly 4 numeric digits (0-9).');
       return;
     }
     if (newPin !== confirmNewPin) {
@@ -92,10 +92,10 @@ export const ProfileModal: React.FC = () => {
       return;
     }
 
-    const res = updateProfilePin(targetPinProfileId, newPin);
+    const res = updateProfilePin(targetPinProfileId, newPin.trim());
     if (res.success) {
       const targetP = profiles.find((p) => p.id === targetPinProfileId);
-      setSuccessMessage(`Updated password for ${targetP?.name || 'profile'}`);
+      setSuccessMessage(`Updated 4-digit PIN for ${targetP?.name || 'profile'}`);
       setNewPin('');
       setConfirmNewPin('');
       setTimeout(() => {
@@ -109,12 +109,12 @@ export const ProfileModal: React.FC = () => {
 
   const handleQuickKeypad = (digit: string) => {
     if (mode === 'switch') {
-      if (pinInput.length < 8) {
+      if (pinInput.length < 4) {
         setPinInput((prev) => prev + digit);
         setErrorMessage(null);
       }
     } else {
-      if (newPin.length < 8) {
+      if (newPin.length < 4) {
         setNewPin((prev) => prev + digit);
         setErrorMessage(null);
       }
@@ -253,9 +253,11 @@ export const ProfileModal: React.FC = () => {
                 <div className="relative">
                   <input
                     type={showPin ? 'text' : 'password'}
+                    maxLength={4}
+                    inputMode="numeric"
                     value={pinInput}
                     onChange={(e) => {
-                      setPinInput(e.target.value);
+                      setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4));
                       setErrorMessage(null);
                     }}
                     placeholder="Enter 4-digit PIN (e.g. 1234 or 0000)"
@@ -347,7 +349,7 @@ export const ProfileModal: React.FC = () => {
                   className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center justify-center gap-1.5 mx-auto"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
-                  <span>Change Password for Profiles (Owner Setting)</span>
+                  <span>Change 4-Digit PIN for Profiles (Owner Setting)</span>
                 </button>
               </div>
             )}
@@ -357,7 +359,7 @@ export const ProfileModal: React.FC = () => {
           <form onSubmit={handleUpdatePin} className="p-5 space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                Select Profile to Set Password For:
+                Select Profile to Set 4-Digit PIN For:
               </label>
               <select
                 value={targetPinProfileId}
@@ -374,13 +376,15 @@ export const ProfileModal: React.FC = () => {
 
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                New Password / PIN (Min 4 digits) *
+                New 4-Digit PIN *
               </label>
               <input
                 type="password"
                 required
+                maxLength={4}
+                inputMode="numeric"
                 value={newPin}
-                onChange={(e) => setNewPin(e.target.value)}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 placeholder="e.g. 5678"
                 className="w-full text-center tracking-widest text-base font-bold font-mono py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
               />
@@ -388,14 +392,16 @@ export const ProfileModal: React.FC = () => {
 
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Confirm New Password / PIN *
+                Confirm New 4-Digit PIN *
               </label>
               <input
                 type="password"
                 required
+                maxLength={4}
+                inputMode="numeric"
                 value={confirmNewPin}
-                onChange={(e) => setConfirmNewPin(e.target.value)}
-                placeholder="Re-type new PIN"
+                onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="Re-type 4-digit PIN"
                 className="w-full text-center tracking-widest text-base font-bold font-mono py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
               />
             </div>

@@ -151,8 +151,8 @@ export const StoreSettingsView: React.FC = () => {
     const owner = profiles.find((p) => p.role === 'owner');
     const staff = profiles.find((p) => p.role === 'staff');
 
-    if (ownerPinEdit.trim().length < 4 || staffPinEdit.trim().length < 4) {
-      setProfileMsg({ type: 'error', text: 'Passwords / PINs must be at least 4 digits.' });
+    if (!/^\d{4}$/.test(ownerPinEdit.trim()) || !/^\d{4}$/.test(staffPinEdit.trim())) {
+      setProfileMsg({ type: 'error', text: 'Both Owner and Staff PINs must be exactly 4 numeric digits (e.g. 1234, 0000).' });
       return;
     }
 
@@ -165,7 +165,7 @@ export const StoreSettingsView: React.FC = () => {
       updateProfileName(staff.id, staffNameEdit.trim());
     }
 
-    setProfileMsg({ type: 'success', text: 'Profile passwords and names updated successfully!' });
+    setProfileMsg({ type: 'success', text: 'Owner & Staff 4-digit PINs updated successfully!' });
     setTimeout(() => setProfileMsg(null), 3500);
   };
 
@@ -436,15 +436,17 @@ export const StoreSettingsView: React.FC = () => {
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Owner Password / PIN (Min 4 digits) *
+                  Owner 4-Digit PIN *
                 </label>
                 <input
                   type={showPinsInSettings ? 'text' : 'password'}
                   required
+                  maxLength={4}
+                  inputMode="numeric"
                   value={ownerPinEdit}
-                  onChange={(e) => setOwnerPinEdit(e.target.value)}
+                  onChange={(e) => setOwnerPinEdit(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="e.g. 1234"
-                  className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-1.5 text-xs font-mono font-bold tracking-widest bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -482,15 +484,17 @@ export const StoreSettingsView: React.FC = () => {
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  Staff Password / PIN (Set by Owner) *
+                  Staff 4-Digit PIN (Set by Owner) *
                 </label>
                 <input
                   type={showPinsInSettings ? 'text' : 'password'}
                   required
+                  maxLength={4}
+                  inputMode="numeric"
                   value={staffPinEdit}
-                  onChange={(e) => setStaffPinEdit(e.target.value)}
+                  onChange={(e) => setStaffPinEdit(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="e.g. 0000"
-                  className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-1.5 text-xs font-mono font-bold tracking-widest bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
