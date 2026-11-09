@@ -27,6 +27,7 @@ import {
   PlayCircle,
   FolderCheck,
 } from 'lucide-react';
+import { downloadBinaryFile, DownloadProgress } from '../../services/fileDownloader';
 
 const CURRENCIES = [
   { symbol: 'PKR', label: 'PKR - Pakistani Rupee (PKR)' },
@@ -72,6 +73,29 @@ export const StoreSettingsView: React.FC = () => {
   // Hard Drive Saving State
   const [syncingHardDrive, setSyncingHardDrive] = useState(false);
   const [hardDriveSuccess, setHardDriveSuccess] = useState<string | null>(null);
+
+  // Package download state
+  const [downloadingPkg, setDownloadingPkg] = useState<'exe' | 'zip' | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+
+  const handleDownloadPackage = async (target: 'exe' | 'zip') => {
+    if (downloadingPkg) return;
+    setDownloadingPkg(target);
+    setDownloadProgress(null);
+    try {
+      if (target === 'exe') {
+        await downloadBinaryFile('/api/download-exe', 'SA_Brothers_POS.exe', (p) => setDownloadProgress(p));
+      } else {
+        await downloadBinaryFile('/api/download-windows-package', 'SA_Brothers_POS_Windows_Package.zip', (p) => setDownloadProgress(p));
+      }
+    } catch (err: any) {
+      console.error(err);
+      window.open(target === 'exe' ? '/api/download-exe' : '/api/download-windows-package', '_blank');
+    } finally {
+      setDownloadingPkg(null);
+      setDownloadProgress(null);
+    }
+  };
 
   const handleManualSaveHardDrive = async () => {
     setSyncingHardDrive(true);
@@ -592,15 +616,38 @@ export const StoreSettingsView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="/api/download-exe"
-              download="SA_Brothers_POS.exe"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95"
-              title="Download standalone Windows executable (SA_Brothers_POS.exe) - runs with zero dependencies!"
+            <button
+              type="button"
+              onClick={() => handleDownloadPackage('exe')}
+              disabled={downloadingPkg !== null}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Download standalone Windows 64-bit executable (SA_Brothers_POS.exe, 68 MB) - runs with zero dependencies!"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download PC App (.exe)</span>
-            </a>
+              <Download className={`w-3.5 h-3.5 ${downloadingPkg === 'exe' ? 'animate-bounce' : ''}`} />
+              <span>
+                {downloadingPkg === 'exe' && downloadProgress
+                  ? `Downloading .exe (${downloadProgress.percent}%) ${downloadProgress.loadedMB}/${downloadProgress.totalMB} MB`
+                  : downloadingPkg === 'exe'
+                  ? 'Downloading 68 MB...'
+                  : 'Download PC App (.exe, 68 MB)'}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDownloadPackage('zip')}
+              disabled={downloadingPkg !== null}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Download full Windows package (56 MB zip) including 68MB .exe, node runtime, launcher, and local database folder"
+            >
+              <Download className={`w-3.5 h-3.5 ${downloadingPkg === 'zip' ? 'animate-bounce' : ''}`} />
+              <span>
+                {downloadingPkg === 'zip' && downloadProgress
+                  ? `Downloading .zip (${downloadProgress.percent}%) ${downloadProgress.loadedMB}/${downloadProgress.totalMB} MB`
+                  : downloadingPkg === 'zip'
+                  ? 'Downloading 56 MB...'
+                  : 'Download Full Package (.zip, 56 MB)'}
+              </span>
+            </button>
             <button
               type="button"
               onClick={handleManualSaveHardDrive}
@@ -613,6 +660,8 @@ export const StoreSettingsView: React.FC = () => {
             <a
               href="/api/download-launcher"
               download="START_SHOP_POS.bat"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-xl text-xs font-bold shadow-sm transition-colors"
               title="Double-click this file on Windows Desktop to launch POS software"
             >
@@ -680,6 +729,7 @@ export const StoreSettingsView: React.FC = () => {
             </div>
             <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
               <div>Executable: <a href="/api/download-exe" download="SA_Brothers_POS.exe" className="font-mono text-indigo-600 dark:text-indigo-400 underline font-bold text-[10px]">SA_Brothers_POS.exe</a></div>
+              <div>Full Package: <a href="/api/download-windows-package" download="SA_Brothers_POS_Windows_Package.zip" className="font-mono text-purple-600 dark:text-purple-400 underline font-bold text-[10px]">SA_Brothers_POS_Windows_Package.zip</a></div>
               <div>App Mode: <span className="text-slate-800 dark:text-slate-200">Native Windows 64-bit App</span></div>
               <div>Backup Tool: <a href="/api/download-backup-bat" download="BACKUP_LOCAL_DATABASE.bat" className="text-emerald-600 dark:text-emerald-400 underline font-medium">Download Backup .bat</a></div>
             </div>

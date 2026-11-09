@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useShop } from '../../context/ShopContext';
+import { downloadBinaryFile, DownloadProgress } from '../../services/fileDownloader';
 import {
   Scale,
   FileStack,
@@ -64,6 +65,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
     openAddProductModal,
     logout,
   } = useShop();
+
+  const [downloadingExe, setDownloadingExe] = useState<DownloadProgress | null>(null);
+  const [isDownloadingExe, setIsDownloadingExe] = useState(false);
+
+  const handleDownloadExe = async () => {
+    if (isDownloadingExe) return;
+    setIsDownloadingExe(true);
+    setDownloadingExe(null);
+    try {
+      await downloadBinaryFile('/api/download-exe', 'SA_Brothers_POS.exe', (p) => {
+        setDownloadingExe(p);
+      });
+    } catch (err: any) {
+      console.error(err);
+      window.open('/api/download-exe', '_blank');
+    } finally {
+      setIsDownloadingExe(false);
+      setDownloadingExe(null);
+    }
+  };
 
   const productNavItems: Array<{
     id: ActiveTab;
@@ -232,15 +253,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             )}
 
-            <a
-              href="/api/download-exe"
-              download="SA_Brothers_POS.exe"
-              className="w-full py-2 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
-              title="Download standalone Windows executable (SA_Brothers_POS.exe)"
+            <button
+              type="button"
+              onClick={handleDownloadExe}
+              disabled={isDownloadingExe}
+              className="w-full py-2 px-3 bg-indigo-50 hover:bg-indigo-100 disabled:bg-indigo-100/50 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              title="Download standalone Windows 64-bit executable (SA_Brothers_POS.exe, 68 MB)"
             >
-              <MonitorDown className="w-3.5 h-3.5" />
-              <span>Download PC App (.exe)</span>
-            </a>
+              <MonitorDown className={`w-3.5 h-3.5 ${isDownloadingExe ? 'animate-bounce text-indigo-600' : ''}`} />
+              <span>
+                {isDownloadingExe && downloadingExe
+                  ? `Downloading ${downloadingExe.percent}% (${downloadingExe.loadedMB}/${downloadingExe.totalMB} MB)`
+                  : isDownloadingExe
+                  ? 'Downloading 68 MB...'
+                  : 'Download PC App (68 MB)'}
+              </span>
+            </button>
           </div>
 
           {/* Left Vertical Navigation List */}

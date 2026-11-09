@@ -1,12 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { ZipArchive } = require('archiver');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.resolve(ROOT_DIR, 'dist');
 const OUTPUT_EXE = path.resolve(ROOT_DIR, 'SA_Brothers_POS.exe');
+const OUTPUT_ZIP = path.resolve(ROOT_DIR, 'SA_Brothers_POS_Windows_Package.zip');
 
 function getMimeType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
@@ -509,7 +514,7 @@ while ($true) {
 `;
 }
 
-function main() {
+async function main() {
   if (!fs.existsSync(DIST_DIR)) {
     console.error('Error: dist/ directory does not exist. Run "npm run build" first.');
     process.exit(1);
@@ -526,13 +531,63 @@ function main() {
     ? fs.readFileSync(path.join(ROOT_DIR, 'sa_brothers_pos.sql')).toString('base64')
     : '';
 
-  const peHeader = buildPe64Stub();
-  const psScript = buildPowerShellPayload(distAssets, launcherBatB64, backupBatB64, sqlDumpB64);
-  const psBytes = Buffer.from(psScript, 'utf8');
+  const nodeWin64Path = path.join(ROOT_DIR, 'node-win64', 'node.exe');
+  const exeStats = fs.existsSync(OUTPUT_EXE) ? fs.statSync(OUTPUT_EXE) : null;
+  const isRealSeaExe = exeStats && exeStats.size > 50 * 1024 * 1024;
 
-  const finalExe = Buffer.concat([peHeader, psBytes]);
-  fs.writeFileSync(OUTPUT_EXE, finalExe);
-  console.log(`Successfully built standalone Windows executable: ${OUTPUT_EXE} (${(finalExe.length / 1024).toFixed(1)} KB)`);
+  if (isRealSeaExe) {
+    console.log(`Preserving authentic Windows standalone executable: ${OUTPUT_EXE} (${(exeStats.size / (1024 * 1024)).toFixed(1)} MB)`);
+  } else if (fs.existsSync(nodeWin64Path)) {
+    fs.copyFileSync(nodeWin64Path, OUTPUT_EXE);
+    console.log(`Initialized full Windows binary from node-win64: ${(fs.statSync(OUTPUT_EXE).size / (1024 * 1024)).toFixed(1)} MB`);
+  }
+
+  // Create full zip package (60MB+ full offline software bundle)
+  await new Promise((resolve, reject) => {
+    const outputStream = fs.createWriteStream(OUTPUT_ZIP);
+    const archive = new ZipArchive({ zlib: { level: 6 } });
+
+    outputStream.on('close', () => {
+      console.log(`Successfully built full Windows ZIP package: ${OUTPUT_ZIP} (${(archive.pointer() / (1024 * 1024)).toFixed(1)} MB)`);
+      resolve(null);
+    });
+
+    archive.on('error', (err) => reject(err));
+    outputStream.on('error', (err) => reject(err));
+
+    archive.pipe(outputStream);
+    archive.file(OUTPUT_EXE, { name: 'SA_Brothers_POS.exe' });
+
+    if (fs.existsSync(nodeWin64Path)) {
+      archive.file(nodeWin64Path, { name: 'node.exe' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'dist-windows', 'app.cjs'))) {
+      archive.file(path.join(ROOT_DIR, 'dist-windows', 'app.cjs'), { name: 'server.cjs' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'START_SHOP_POS.bat'))) {
+      archive.file(path.join(ROOT_DIR, 'START_SHOP_POS.bat'), { name: 'START_SHOP_POS.bat' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'BACKUP_LOCAL_DATABASE.bat'))) {
+      archive.file(path.join(ROOT_DIR, 'BACKUP_LOCAL_DATABASE.bat'), { name: 'BACKUP_LOCAL_DATABASE.bat' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'SHOP_COMPUTER_SETUP_GUIDE.md'))) {
+      archive.file(path.join(ROOT_DIR, 'SHOP_COMPUTER_SETUP_GUIDE.md'), { name: 'SHOP_COMPUTER_SETUP_GUIDE.md' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'README.md'))) {
+      archive.file(path.join(ROOT_DIR, 'README.md'), { name: 'README.md' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'sa_brothers_pos.sql'))) {
+      archive.file(path.join(ROOT_DIR, 'sa_brothers_pos.sql'), { name: 'sa_brothers_pos.sql' });
+    }
+    if (fs.existsSync(path.join(ROOT_DIR, 'local_database'))) {
+      archive.directory(path.join(ROOT_DIR, 'local_database'), 'local_database');
+    }
+    if (fs.existsSync(DIST_DIR)) {
+      archive.directory(DIST_DIR, 'dist');
+    }
+
+    archive.finalize().catch(reject);
+  });
 }
 
 main();

@@ -13,6 +13,7 @@ import {
   Delete,
 } from 'lucide-react';
 import saBrothersLogo from '../../assets/images/sa_brothers_logo.jpg';
+import { downloadBinaryFile, DownloadProgress } from '../../services/fileDownloader';
 
 export const LoginScreen: React.FC = () => {
   const { login, settings, profiles } = useShop();
@@ -23,6 +24,28 @@ export const LoginScreen: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedAttempts, setFailedAttempts] = useState<number>(0);
   const [lockoutSeconds, setLockoutSeconds] = useState<number>(0);
+
+  const [downloadingTarget, setDownloadingTarget] = useState<'exe' | 'zip' | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+
+  const handleDownload = async (target: 'exe' | 'zip') => {
+    if (downloadingTarget) return;
+    setDownloadingTarget(target);
+    setDownloadProgress(null);
+    try {
+      if (target === 'exe') {
+        await downloadBinaryFile('/api/download-exe', 'SA_Brothers_POS.exe', (p) => setDownloadProgress(p));
+      } else {
+        await downloadBinaryFile('/api/download-windows-package', 'SA_Brothers_POS_Windows_Package.zip', (p) => setDownloadProgress(p));
+      }
+    } catch (err: any) {
+      console.error(err);
+      window.open(target === 'exe' ? '/api/download-exe' : '/api/download-windows-package', '_blank');
+    } finally {
+      setDownloadingTarget(null);
+      setDownloadProgress(null);
+    }
+  };
 
   const ownerProfile = profiles.find((p) => p.role === 'owner');
   const staffProfile = profiles.find((p) => p.role === 'staff');
@@ -351,16 +374,40 @@ export const LoginScreen: React.FC = () => {
           </button>
         </form>
 
-        {/* Direct Windows .EXE Download Link */}
-        <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-center">
-          <a
-            href="/api/download-exe"
-            download="SA_Brothers_POS.exe"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-all"
+        {/* Direct Windows .EXE & Package Download Links with In-App Streaming */}
+        <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleDownload('exe')}
+            disabled={downloadingTarget !== null}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Download standalone Windows 64-bit executable (SA_Brothers_POS.exe, 68 MB)"
           >
-            <MonitorDown className="w-3.5 h-3.5" />
-            <span>Download Windows Desktop App (.exe)</span>
-          </a>
+            <MonitorDown className={`w-3.5 h-3.5 ${downloadingTarget === 'exe' ? 'animate-bounce' : ''}`} />
+            <span>
+              {downloadingTarget === 'exe' && downloadProgress
+                ? `Downloading .exe (${downloadProgress.percent}%)`
+                : downloadingTarget === 'exe'
+                ? 'Downloading (68 MB)...'
+                : 'Download .exe (68 MB)'}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDownload('zip')}
+            disabled={downloadingTarget !== null}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-700 text-indigo-300 hover:text-indigo-200 text-xs font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Download full Windows package (.zip with 68MB exe, node runtime, launcher, backup tool and database)"
+          >
+            <MonitorDown className={`w-3.5 h-3.5 ${downloadingTarget === 'zip' ? 'animate-bounce' : ''}`} />
+            <span>
+              {downloadingTarget === 'zip' && downloadProgress
+                ? `Downloading .zip (${downloadProgress.percent}%)`
+                : downloadingTarget === 'zip'
+                ? 'Downloading (56 MB)...'
+                : 'Full Package .zip (56 MB)'}
+            </span>
+          </button>
         </div>
       </div>
 

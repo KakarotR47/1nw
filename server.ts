@@ -198,12 +198,31 @@ app.get('/api/download-exe', (_req, res) => {
   if (!fs.existsSync(exePath)) {
     return res.status(404).json({ error: 'SA_Brothers_POS.exe not found' });
   }
+  const stat = fs.statSync(exePath);
   res.setHeader('Content-Type', 'application/vnd.microsoft.portable-executable');
   res.setHeader('Content-Disposition', 'attachment; filename="SA_Brothers_POS.exe"');
+  res.setHeader('Content-Length', stat.size.toString());
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Disposition');
   res.sendFile(exePath);
 });
 
-// 5b. Download Windows Desktop Launcher (.bat)
+// 5b. Download Full Windows Installation Package (.zip containing .exe, .bat, setup guide & database)
+app.get('/api/download-windows-package', (_req, res) => {
+  const zipPath = path.resolve(__dirname, 'SA_Brothers_POS_Windows_Package.zip');
+  if (!fs.existsSync(zipPath)) {
+    return res.status(404).json({ error: 'SA_Brothers_POS_Windows_Package.zip not found' });
+  }
+  const stat = fs.statSync(zipPath);
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="SA_Brothers_POS_Windows_Package.zip"');
+  res.setHeader('Content-Length', stat.size.toString());
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Disposition');
+  res.sendFile(zipPath);
+});
+
+// 5c. Download Windows Desktop Launcher (.bat)
 app.get('/api/download-launcher', (_req, res) => {
   const batPath = path.resolve(__dirname, 'START_SHOP_POS.bat');
   res.setHeader('Content-Type', 'application/x-bat');
