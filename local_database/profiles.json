@@ -3,7 +3,7 @@
     "id": "prof-owner",
     "name": "Shop Owner (Admin)",
     "role": "owner",
-    "pin": "2020",
+    "pin": "1234",
     "title": "Owner - Full Administrative Access",
     "avatarColor": "from-amber-500 to-amber-700"
   },
