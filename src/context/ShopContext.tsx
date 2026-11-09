@@ -203,8 +203,15 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               setSettings(mergedSettings);
             }
             if (Array.isArray(d.profiles) && d.profiles.length > 0) {
-              storageService.saveProfiles(d.profiles);
-              setProfiles(d.profiles);
+              const userSavedInBrowser = localStorage.getItem('shopkeep_profiles_user_saved_v8') === 'true';
+              if (userSavedInBrowser) {
+                const currentLocalProfiles = storageService.getProfiles();
+                setProfiles(currentLocalProfiles);
+                storageService.saveToHardDrive({ profiles: currentLocalProfiles });
+              } else {
+                storageService.saveProfiles(d.profiles);
+                setProfiles(d.profiles);
+              }
             }
           } else {
             // First boot: seed local_database on disk with initial state
@@ -329,18 +336,18 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const switchProfile = (profileId: string, pin: string): { success: boolean; message?: string } => {
-    const target = profiles.find((p) => p.id === profileId);
+    const latestProfiles = storageService.getProfiles();
+    const target = latestProfiles.find((p) => p.id === profileId) || profiles.find((p) => p.id === profileId);
     if (!target) return { success: false, message: 'Profile not found' };
 
     const pinClean = pin.trim();
     const targetPinClean = target.pin.trim();
-    const isFactoryDefaultOwner =
-      target.role === 'owner' &&
-      ['1234', '1080', '2020'].includes(targetPinClean) &&
-      ['1234', '1080', '2020'].includes(pinClean);
 
-    if (pinClean !== targetPinClean && !isFactoryDefaultOwner) {
-      return { success: false, message: 'Incorrect 4-digit PIN code' };
+    if (pinClean !== targetPinClean) {
+      return {
+        success: false,
+        message: `Incorrect 4-digit PIN. Only the exact PIN saved for ${target.name} is accepted.`,
+      };
     }
 
     setActiveProfileId(profileId);
@@ -356,22 +363,25 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: false, message: 'Please enter your 4-digit PIN.' };
     }
 
-    const staffProfile = profiles.find((prof) => prof.role === 'staff') || DEFAULT_PROFILES[1];
-    const ownerProfile = profiles.find((prof) => prof.role === 'owner') || DEFAULT_PROFILES[0];
+    const latestProfiles = storageService.getProfiles();
+    const staffProfile =
+      latestProfiles.find((prof) => prof.role === 'staff') ||
+      profiles.find((prof) => prof.role === 'staff') ||
+      DEFAULT_PROFILES[1];
+    const ownerProfile =
+      latestProfiles.find((prof) => prof.role === 'owner') ||
+      profiles.find((prof) => prof.role === 'owner') ||
+      DEFAULT_PROFILES[0];
 
-    const staffPin = (staffProfile.pin || '0000').trim();
-    const ownerPin = (ownerProfile.pin || '1234').trim();
-    const matchesOwnerPin =
-      p === ownerPin ||
-      (['1234', '1080', '2020'].includes(ownerPin) && ['1234', '1080', '2020'].includes(p));
-    const matchesStaffPin = p === staffPin;
+    const staffPin = (staffProfile.pin || '').trim();
+    const ownerPin = (ownerProfile.pin || '').trim();
 
     const isOwnerRole = u === 'owner' || u === 'prof-owner' || u === 'admin' || u === 'shop owner';
     const isStaffRole = u === 'staff' || u === 'prof-staff' || u === 'cashier' || u === 'staff cashier';
 
-    // 1. Owner login by 4-digit PIN
+    // 1. Strict Owner login: ONLY the exact saved Owner PIN can open Owner profile
     if (isOwnerRole) {
-      if (matchesOwnerPin) {
+      if (p === ownerPin) {
         setActiveProfileId(ownerProfile.id);
         setIsLoggedIn(true);
         setIsThisDeviceAuthorized(true);
@@ -379,13 +389,13 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return {
         success: false,
-        message: 'Incorrect 4-digit PIN for Shop Owner.',
+        message: 'Incorrect Owner PIN. Only the exact 4-digit PIN saved for Shop Owner can unlock this profile.',
       };
     }
 
-    // 2. Staff login by 4-digit PIN
+    // 2. Strict Staff login: ONLY the exact saved Staff PIN can open Staff profile
     if (isStaffRole) {
-      if (matchesStaffPin) {
+      if (p === staffPin) {
         setActiveProfileId(staffProfile.id);
         setIsLoggedIn(true);
         setIsThisDeviceAuthorized(true);
@@ -393,18 +403,18 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return {
         success: false,
-        message: 'Incorrect 4-digit PIN for Staff Cashier.',
+        message: 'Incorrect Staff PIN. Only the exact 4-digit PIN saved for Staff Cashier can unlock this profile.',
       };
     }
 
-    // 3. Fallback match by PIN
-    if (matchesOwnerPin) {
+    // 3. Fallback exact match if no role specified
+    if (p === ownerPin) {
       setActiveProfileId(ownerProfile.id);
       setIsLoggedIn(true);
       setIsThisDeviceAuthorized(true);
       return { success: true };
     }
-    if (matchesStaffPin) {
+    if (p === staffPin) {
       setActiveProfileId(staffProfile.id);
       setIsLoggedIn(true);
       setIsThisDeviceAuthorized(true);
@@ -413,7 +423,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return {
       success: false,
-      message: 'Incorrect 4-digit PIN. Please select Owner or Staff and enter your 4-digit PIN.',
+      message: 'Incorrect 4-digit PIN. Only the PIN saved in Profile Settings is accepted.',
     };
   };
 
@@ -434,19 +444,36 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!/^\d{4}$/.test(cleaned)) {
       return { success: false, message: 'PIN must be exactly 4 digits (0-9)' };
     }
-    const updated = profiles.map((p) => (p.id === profileId ? { ...p, pin: cleaned } : p));
-    storageService.saveProfiles(updated);
-    storageService.saveToHardDrive({ profiles: updated });
-    setProfiles(updated);
+    const currentStored = storageService.getProfiles();
+    const updatedStored = currentStored.map((p) => (p.id === profileId ? { ...p, pin: cleaned } : p));
+    localStorage.setItem('shopkeep_profiles_user_saved_v8', 'true');
+    storageService.saveProfiles(updatedStored);
+    storageService.saveToHardDrive({ profiles: updatedStored });
+
+    setProfiles((prev) => {
+      const next = prev.map((p) => (p.id === profileId ? { ...p, pin: cleaned } : p));
+      storageService.saveProfiles(next);
+      storageService.saveToHardDrive({ profiles: next });
+      return next;
+    });
     return { success: true, message: '4-digit PIN updated successfully' };
   };
 
   const updateProfileName = (profileId: string, newName: string) => {
-    if (!newName.trim()) return;
-    const updated = profiles.map((p) => (p.id === profileId ? { ...p, name: newName.trim() } : p));
-    storageService.saveProfiles(updated);
-    storageService.saveToHardDrive({ profiles: updated });
-    setProfiles(updated);
+    const cleanedName = (newName || '').trim();
+    if (!cleanedName) return;
+    const currentStored = storageService.getProfiles();
+    const updatedStored = currentStored.map((p) => (p.id === profileId ? { ...p, name: cleanedName } : p));
+    localStorage.setItem('shopkeep_profiles_user_saved_v8', 'true');
+    storageService.saveProfiles(updatedStored);
+    storageService.saveToHardDrive({ profiles: updatedStored });
+
+    setProfiles((prev) => {
+      const next = prev.map((p) => (p.id === profileId ? { ...p, name: cleanedName } : p));
+      storageService.saveProfiles(next);
+      storageService.saveToHardDrive({ profiles: next });
+      return next;
+    });
   };
 
   const openAddProductModal = (initialCategory?: string) => {

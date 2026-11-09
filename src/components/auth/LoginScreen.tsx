@@ -292,12 +292,11 @@ export const LoginScreen: React.FC = () => {
             </button>
           </div>
 
-          {/* Default 4-Digit PIN Info Helper */}
+          {/* Strict 4-Digit PIN Security Notice */}
           <div className="px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Default 4-Digit PINs:</span>
-            <span className="font-mono text-slate-300">
-              Owner: <strong className="text-amber-400">1234</strong> · Staff:{' '}
-              <strong className="text-emerald-400">0000</strong>
+            <span>🔒 Strict Profile Security:</span>
+            <span className="text-slate-300 font-medium">
+              Only the saved {selectedRole === 'owner' ? 'Owner' : 'Staff'} 4-digit PIN unlocks
             </span>
           </div>
 

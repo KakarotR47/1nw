@@ -767,8 +767,8 @@ export const StoreSettingsView: React.FC = () => {
               <span>Pre-Seeded Access</span>
             </div>
             <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5">
-              <div>👑 Owner PIN: <strong className="text-amber-600">1234</strong></div>
-              <div>👤 Staff PIN: <strong className="text-blue-600">0000</strong></div>
+              <div>👑 Owner PIN: <strong className="text-amber-600">{showPinsInSettings ? ownerPinEdit : '••••'}</strong></div>
+              <div>👤 Staff PIN: <strong className="text-blue-600">{showPinsInSettings ? staffPinEdit : '••••'}</strong></div>
               <div>💵 Default Float: <strong className="text-emerald-600">PKR 10,000</strong></div>
             </div>
           </div>

@@ -302,9 +302,9 @@ export const ProfileModal: React.FC = () => {
                 </button>
               </div>
 
-              {/* Default PIN Helper Tip */}
+              {/* Strict PIN Security Tip */}
               <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
-                <span>Default PINs: <strong>Owner: 1234</strong> · <strong>Staff: 0000</strong></span>
+                <span>🔒 Only the exact 4-digit PIN saved for <strong>{targetProfile.name}</strong> is accepted.</span>
               </div>
 
               {/* Error & Success Messages */}

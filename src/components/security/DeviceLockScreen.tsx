@@ -21,7 +21,7 @@ export const DeviceLockScreen: React.FC = () => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (enteredPin.trim() !== (ownerProfile?.pin || '1234').trim()) {
+    if (!ownerProfile || enteredPin.trim() !== ownerProfile.pin.trim()) {
       setErrorMsg('Incorrect Owner PIN. Only the Store Owner can authorize this computer.');
       return;
     }
