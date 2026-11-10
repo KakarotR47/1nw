@@ -176,7 +176,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       '==================================================',
       `RECEIPT NUMBER:   ${transaction.receiptNumber}`,
       `DATE & TIME:      ${formattedDateTime}`,
-      `STATION/TILL:     Counter #1 (Main Court Gate)`,
       `CASHIER:          ${transaction.cashierName}`,
       transaction.customerName ? `CLIENT:           ${transaction.customerName}` : '',
       transaction.customerPhone ? `CONTACT:          ${transaction.customerPhone}` : '',
@@ -396,10 +395,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <div className="flex justify-between">
                   <span className="text-slate-500">DATE &amp; TIME:</span>
                   <span className="text-slate-900 font-medium">{formattedDateTime}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">COUNTER:</span>
-                  <span className="text-slate-900">Counter #1 (Main Court Gate)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">CASHIER:</span>

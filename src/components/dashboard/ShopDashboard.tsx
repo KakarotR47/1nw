@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useShop } from '../../context/ShopContext';
 import { getLocalDateStr, isSameDayAsDateStr } from '../../services/storage';
+import { LowStockRestockWidget } from './LowStockRestockWidget';
 import {
   TrendingUp,
   DollarSign,
@@ -427,67 +428,8 @@ export const ShopDashboard: React.FC<{
         </div>
       </div>
 
-      {/* Low Stock Alerts & Immediate Reorder Panel */}
-      {totalAlertsCount > 0 && (
-        <div className="p-4 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60 rounded-xl shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Live Inventory Alerts ({totalAlertsCount} items require replenishment)
-              </h2>
-            </div>
-            <button
-              onClick={onNavigateToInventory}
-              className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
-            >
-              <span>Manage All Inventory</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[...outOfStockProducts, ...lowStockProducts].slice(0, 6).map((item) => {
-              const isOut = item.currentStock <= 0;
-              return (
-                <div
-                  key={item.id}
-                  className={`p-3 rounded-lg border flex items-center justify-between gap-3 text-xs ${
-                    isOut
-                      ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50'
-                      : 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50'
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-900 dark:text-white truncate">
-                      {item.name}
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                      <span className="font-mono">{item.sku}</span>
-                      <span aria-hidden="true">·</span>
-                      <span
-                        className={`font-bold ${
-                          isOut ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
-                        }`}
-                      >
-                        {isOut ? 'Out of stock' : `${item.currentStock} remaining`}
-                      </span>
-                      <span className="text-slate-400">(min {item.minStockThreshold})</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => restockProduct(item.id, 12, undefined, 'Quick dashboard reorder')}
-                    className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 rounded text-[11px] font-semibold transition-colors shrink-0"
-                  >
-                    +12 Restock
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Products Below Minimum Stock Threshold & Quick Restocking Widget */}
+      <LowStockRestockWidget onNavigateToInventory={onNavigateToInventory} />
 
       {/* Charts & Analytical Visualizations */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

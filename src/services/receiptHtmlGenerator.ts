@@ -380,10 +380,6 @@ export function renderReceiptSlipHtml(
         <span class="val">${formattedDateTime}</span>
       </div>
       <div class="meta-row">
-        <span>COUNTER:</span>
-        <span class="val">Counter #1 (Main Court Gate)</span>
-      </div>
-      <div class="meta-row">
         <span>CASHIER:</span>
         <span class="val">${transaction.cashierName}</span>
       </div>
