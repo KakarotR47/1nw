@@ -8,8 +8,8 @@ export function renderReceiptSlipHtml(
   const shopName = customSettings?.shopName || 'S.A. BROTHERS VENDORS';
   const tagline = customSettings?.tagline || 'Court Stamp Vendors & Legal Paper';
   const address = customSettings?.address || 'Shop #14, District Court Complex, Main Law Bazaar';
-  const phone = customSettings?.phone || '+92 (300) 582-9011';
-  const taxNumber = customSettings?.taxNumber || 'PK-NTN-8924018';
+  const helpline = customSettings?.helpline || '+923401645979 +923002634491';
+  const licenseNumber = customSettings?.licenseNumber || 'Gos-KHI 18';
   const currency = customSettings?.currency || 'PKR';
   const headerNote = customSettings?.receiptHeader || 'Thank you for choosing SA Brothers Vendors!';
   const footerNote = customSettings?.receiptFooter || 'Court stamp papers & legal forms verified authentic. Shukriya!';
@@ -145,22 +145,25 @@ export function renderReceiptSlipHtml(
     .uppercase { text-transform: uppercase; }
 
     .logo-wrapper {
-      width: 60px;
-      height: 60px;
-      margin: 0 auto 6px auto;
+      width: 62px;
+      height: 62px;
+      margin: 4px auto 4px auto;
       border-radius: 50%;
       border: 2px solid #000000;
-      overflow: hidden;
+      background: #ffffff;
+      padding: 1.5px;
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
     .logo-img {
-      width: 56px;
-      height: 56px;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
       display: block;
-      object-fit: cover;
+      object-fit: contain;
     }
 
     .shop-title {
@@ -304,9 +307,17 @@ export function renderReceiptSlipHtml(
         width: 100% !important;
         max-width: 80mm !important;
         margin: 0 auto !important;
-        padding: 2mm 1mm !important;
+        padding: 8mm 2mm 4mm 2mm !important; /* Generous top breathing margin so thermal paper tear/cut never touches logo */
         border: none !important;
         box-shadow: none !important;
+      }
+      .logo-wrapper {
+        margin: 2px auto 4px auto !important;
+        padding: 1.5px !important;
+      }
+      .logo-img {
+        object-fit: contain !important;
+        display: block !important;
       }
     }
   </style>
@@ -336,15 +347,15 @@ export function renderReceiptSlipHtml(
     <!-- BRANDING HEADER WITH SA BROTHERS EMBLEM -->
     <div class="text-center">
       <div class="logo-wrapper">
-        <img src="${SA_BROTHERS_LOGO_DATA_URL}" alt="Logo" class="logo-img" width="56" height="56" />
+        <img src="${SA_BROTHERS_LOGO_DATA_URL}" alt="Logo" class="logo-img" width="58" height="58" />
       </div>
       <h1 class="shop-title">${shopName.toUpperCase()}</h1>
       <p class="shop-sub">${tagline}</p>
       <p class="shop-address">${address}</p>
-      <p class="shop-address font-mono">Tel: ${phone} · NTN: ${taxNumber}</p>
+      <p class="shop-address font-mono" style="font-weight: bold; font-size: 8.5px; color: #111; margin: 2px 0;">Helpline: ${helpline}</p>
       
       <div class="reg-badge">
-        <span>LIC # KHI-786/STP</span>
+        <span>Lic : ${licenseNumber}</span>
         <span>DISTRICT &amp; SESSIONS COURTS</span>
       </div>
       ${

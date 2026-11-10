@@ -117,11 +117,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handleCopyWhatsApp = async () => {
+    const helpline = settings.helpline || '+923401645979 +923002634491';
+    const licNum = settings.licenseNumber || 'Gos-KHI 18';
+
     const textLines = [
       `🏛️ *${settings.shopName.toUpperCase()}*`,
       `📜 _Court Stamp Vendors & Legal Paper Specialists_`,
       `📍 ${settings.address}`,
-      `📞 Tel: ${settings.phone}`,
+      `📞 Helpline: ${helpline}`,
+      `⚖️ Lic : ${licNum} (District & Sessions Courts)`,
       `----------------------------------------`,
       `🧾 *RECEIPT NO:* ${transaction.receiptNumber}`,
       `📅 *DATE:* ${formattedDateTime}`,
@@ -159,13 +163,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handleDownloadText = () => {
+    const helpline = settings.helpline || '+923401645979 +923002634491';
+    const licNum = settings.licenseNumber || 'Gos-KHI 18';
+
     const textLines = [
       '==================================================',
       `             ${settings.shopName.toUpperCase()}`,
       '        COURT STAMP VENDORS & LEGAL PAPER',
       `       Shop #14, District Court Complex`,
-      `             Tel: ${settings.phone}`,
-      settings.taxNumber ? `          NTN / Reg: ${settings.taxNumber}` : '',
+      `             Helpline: ${helpline}`,
+      `             Lic : ${licNum}`,
       '==================================================',
       `RECEIPT NUMBER:   ${transaction.receiptNumber}`,
       `DATE & TIME:      ${formattedDateTime}`,
@@ -339,14 +346,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               
               {/* BRANDING HEADER WITH OFFICIAL SA BROTHERS LOGO */}
               <div className="text-center pb-2 border-b-2 border-slate-900 space-y-1">
-                <div className="flex justify-center items-center">
-                  <div className="w-14 h-14 rounded-full p-0.5 border-2 border-slate-900 bg-white flex items-center justify-center overflow-hidden">
+                <div className="flex justify-center items-center pt-1 pb-0.5">
+                  <div className="receipt-logo-wrapper w-16 h-16 rounded-full p-1 border-2 border-slate-900 bg-white flex items-center justify-center overflow-hidden">
                     <img
                       src={SA_BROTHERS_LOGO_DATA_URL}
                       alt="SA Brothers Vendors Logo"
-                      className="w-full h-full object-cover rounded-full"
-                      width="54"
-                      height="54"
+                      className="receipt-logo-img w-full h-full object-contain rounded-full"
+                      width="58"
+                      height="58"
                     />
                   </div>
                 </div>
@@ -361,14 +368,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <p className="text-[8.5px] text-slate-600 leading-snug">
                     {settings.address || 'Shop #14, District Court Complex, Main Law Bazaar'}
                   </p>
-                  <p className="text-[8.5px] text-slate-600 font-mono">
-                    Tel: {settings.phone} {settings.taxNumber ? `· NTN: ${settings.taxNumber}` : ''}
+                  <p className="text-[8.5px] text-slate-900 font-mono font-bold mt-0.5">
+                    Helpline: {settings.helpline || '+923401645979 +923002634491'}
                   </p>
                 </div>
 
                 <div className="pt-0.5">
                   <div className="bg-slate-100 border border-slate-300 rounded py-0.5 px-1.5 text-[8.5px] font-mono text-slate-700 flex justify-between items-center">
-                    <span className="font-bold text-slate-900">LIC # KHI-786/STP</span>
+                    <span className="font-bold text-slate-900">Lic : {settings.licenseNumber || 'Gos-KHI 18'}</span>
                     <span>DISTRICT &amp; SESSIONS COURTS</span>
                   </div>
                 </div>

@@ -300,24 +300,38 @@ export const StoreSettingsView: React.FC = () => {
 
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                Contact Phone # *
+                Receipt Helpline Numbers *
               </label>
               <input
                 type="text"
                 required
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                value={form.helpline || form.phone}
+                onChange={(e) => setForm({ ...form, helpline: e.target.value, phone: e.target.value })}
+                placeholder="+923401645979 +923002634491"
+                className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                Tax / VAT / GST Registration # *
+                Court Vendor License # (Printed on Receipts) *
               </label>
               <input
                 type="text"
                 required
+                value={form.licenseNumber || 'Gos-KHI 18'}
+                onChange={(e) => setForm({ ...form, licenseNumber: e.target.value })}
+                placeholder="Gos-KHI 18"
+                className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                Tax / NTN Registration #
+              </label>
+              <input
+                type="text"
                 value={form.taxNumber}
                 onChange={(e) => setForm({ ...form, taxNumber: e.target.value })}
                 className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"

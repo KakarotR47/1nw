@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useShop } from '../../context/ShopContext';
 import { ActiveTab } from './Sidebar';
-import { Menu, AlertTriangle, Coins, Store, Lock, ShieldCheck, UserCheck, Plus, LogOut, MonitorDown } from 'lucide-react';
-import { downloadBinaryFile, DownloadProgress } from '../../services/fileDownloader';
+import { Menu, AlertTriangle, Coins, Lock, Plus, LogOut } from 'lucide-react';
 
 interface TopBarProps {
   activeTab: ActiveTab;
@@ -68,26 +67,6 @@ export const TopBar: React.FC<TopBarProps> = ({
     logout,
   } = useShop();
   const currentTabInfo = TAB_TITLES[activeTab] || TAB_TITLES.pos;
-  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
-  const [isDownloading, setIsDownloading] = useState<boolean>(false);
-
-  const handleDownloadExe = async () => {
-    if (isDownloading) return;
-    setIsDownloading(true);
-    setDownloadProgress(null);
-    try {
-      await downloadBinaryFile('/api/download-exe', 'SA_Brothers_POS.exe', (p) => {
-        setDownloadProgress(p);
-      });
-    } catch (err: any) {
-      console.error('Download error:', err);
-      // Fallback direct link
-      window.open('/api/download-exe', '_blank');
-    } finally {
-      setIsDownloading(false);
-      setDownloadProgress(null);
-    }
-  };
 
   return (
     <header className="no-print bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
@@ -114,24 +93,6 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Right Status Indicators & Profile Control */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Download Standalone Windows .EXE App with In-App Progress */}
-          <button
-            type="button"
-            onClick={handleDownloadExe}
-            disabled={isDownloading}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-            title="Download standalone Windows 64-bit executable (SA_Brothers_POS.exe, 68 MB)"
-          >
-            <MonitorDown className={`w-3.5 h-3.5 ${isDownloading ? 'animate-bounce' : ''}`} />
-            <span>
-              {isDownloading && downloadProgress
-                ? `Downloading (${downloadProgress.percent}%) ${downloadProgress.loadedMB}/${downloadProgress.totalMB} MB`
-                : isDownloading
-                ? 'Downloading (68 MB)...'
-                : 'Download .exe (68 MB)'}
-            </span>
-          </button>
-
           {/* Owner Quick Add Item button */}
           {isOwner && (
             <button

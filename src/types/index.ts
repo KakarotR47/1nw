@@ -120,6 +120,8 @@ export interface ShopSettings {
   tagline: string;
   address: string;
   phone: string;
+  helpline?: string;
+  licenseNumber?: string;
   email: string;
   taxNumber: string;
   currency: string; // e.g. '$', '€', '£', '₹', 'Rs'

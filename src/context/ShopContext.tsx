@@ -84,6 +84,10 @@ interface ShopContextType {
   // Checkout & Receipts
   checkoutSale: (paymentMethod: PaymentMethod, amountTendered: number, notes?: string) => SaleTransaction | null;
   refundSale: (transactionId: string, reason?: string) => void;
+  deleteTransaction: (transactionId: string) => void;
+  deleteMultipleTransactions: (transactionIds: string[]) => { success: boolean; count: number };
+  clearTransactionsOlderThanDays: (days: number) => { success: boolean; count: number };
+  clearAllTransactions: () => { success: boolean; count: number };
   clearProfitAndSalesData: (scope: 'today' | 'all') => { success: boolean; count: number };
   openReceiptModal: (transaction: SaleTransaction) => void;
   closeReceiptModal: () => void;
@@ -834,6 +838,49 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { success: true, count };
   };
 
+  // Delete single transaction from past bills & receipts (Owner only)
+  const deleteTransaction = (transactionId: string) => {
+    if (!isOwner) return;
+    const updated = transactions.filter((t) => t.id !== transactionId);
+    storageService.saveTransactions(updated);
+    storageService.saveToHardDrive({ transactions: updated });
+    setTransactions(updated);
+  };
+
+  // Delete multiple selected transactions (Owner only)
+  const deleteMultipleTransactions = (transactionIds: string[]): { success: boolean; count: number } => {
+    if (!isOwner) return { success: false, count: 0 };
+    const idsSet = new Set(transactionIds);
+    const updated = transactions.filter((t) => !idsSet.has(t.id));
+    const count = transactions.length - updated.length;
+    storageService.saveTransactions(updated);
+    storageService.saveToHardDrive({ transactions: updated });
+    setTransactions(updated);
+    return { success: true, count };
+  };
+
+  // Clear transactions older than X days (Owner only)
+  const clearTransactionsOlderThanDays = (days: number): { success: boolean; count: number } => {
+    if (!isOwner) return { success: false, count: 0 };
+    const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000;
+    const updated = transactions.filter((t) => new Date(t.timestamp).getTime() >= cutoffTime);
+    const count = transactions.length - updated.length;
+    storageService.saveTransactions(updated);
+    storageService.saveToHardDrive({ transactions: updated });
+    setTransactions(updated);
+    return { success: true, count };
+  };
+
+  // Clear all transactions from past bills & receipts (Owner only)
+  const clearAllTransactions = (): { success: boolean; count: number } => {
+    if (!isOwner) return { success: false, count: 0 };
+    const count = transactions.length;
+    storageService.saveTransactions([]);
+    storageService.saveToHardDrive({ transactions: [] });
+    setTransactions([]);
+    return { success: true, count };
+  };
+
   const openReceiptModal = (tx: SaleTransaction) => {
     setCurrentReceipt(tx);
     setIsReceiptModalOpen(true);
@@ -1269,6 +1316,10 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         deleteHeldOrder,
         checkoutSale,
         refundSale,
+        deleteTransaction,
+        deleteMultipleTransactions,
+        clearTransactionsOlderThanDays,
+        clearAllTransactions,
         clearProfitAndSalesData,
         openReceiptModal,
         closeReceiptModal,
